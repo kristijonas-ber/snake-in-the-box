@@ -5,8 +5,8 @@ $n$-dimensional hypercube graph $Q_n$.
 
 | Track | Method | Guarantee | Reach |
 |---|---|---|---|
-| [`exhaustive/`](exhaustive/) | canonical-augmentation DFS over MPI | proves the maximum, enumerates every longest snake | $Q_6$ on one machine |
-| [`heuristic/`](heuristic/) | fitness-pruned BFS beam search | lower bound only | $Q_{15}$ in minutes |
+| [`exhaustive/`](exhaustive/) | canonical-augmentation DFS over MPI | proves the maximum, enumerates every longest snake | $Q_7$ on one machine, in hours |
+| [`heuristic/`](heuristic/) | fitness-pruned BFS beam search | lower bound only | any dimension — thin the beam to fit the budget |
 
 ---
 
@@ -19,16 +19,10 @@ $n$-dimensional hypercube graph $Q_n$.
 | **Longest snake (edges)** | 1 | 2 | 4 | 7 | 13 | 26 |
 | **Distinct longest snakes** | 1 | 1 | 1 | 1 | 8 | 1 |
 
-The proven optima continue 7 → 50 and 8 → 98, both out of reach here on one machine.
+$Q_7$ (50 edges) is reachable on a single machine given hours; $Q_8$ (98) is not.
 
-**Heuristic — lower bounds.** Grown by this project, by extending the seeds below:
-
-| Dimension | Longest snake (edges) | File |
-|---|---|---|
-| 14 | 5457 | `heuristic/seeds/dim14_len5457_bernatonis.txt` |
-| 15 | 10375 | `heuristic/seeds/dim15_len10375_bernatonis.txt` |
-
-The seeds they grew from are **prior work, not results of this repo**:
+**Seeds.** The snakes shipped in `heuristic/seeds/` are **prior work, not results of
+this repo** — they are inputs to extend from, credited in each filename:
 
 | Dimension | 9 | 10 | 11 | 12 | 13 |
 |---|---|---|---|---|---|
@@ -203,8 +197,7 @@ credits the discoverer and is added by hand, never by the code**.
 | Example | Meaning |
 |---|---|
 | `dim15_len10149.txt` | a solver's output, unattributed |
-| `dim15_len10375_bernatonis.txt` | this project's record for $Q_{15}$ |
-| `dim13_len2854_ace.txt` | prior work by Ace — an input, not a result of this repo |
+| `dim13_len2854_ace.txt` | attributed to its discoverer, by hand |
 
 ### Adding a seed
 
