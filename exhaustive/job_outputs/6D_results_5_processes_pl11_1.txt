@@ -1,0 +1,11 @@
+Runtime = 0.00000 hours
+Pass-1 (search) time = 0.008050 seconds
+Pass-2 (emit) time = 0.000410 seconds
+Slice = 0 of 1
+Roots computed = 1106 of 1106
+Number of max snakes found = 1
+Maximum length snake is: 26
+Snake paths:
+---
+0 1 3 7 15 13 12 28 20 21 53 37 36 38 46 62 63 59 43 41 40 56 48 50 18 26 10 
+---

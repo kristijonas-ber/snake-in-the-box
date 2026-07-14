@@ -1,0 +1,7 @@
+--- Process 4, prefix 0 ---
+Runtime = 0.0000010000 seconds
+Number of max snakes found = 1
+Maximum length snake = 4
+Search space (vertices) = 4
+Knuth estimate (0 probes) = 0.00  (ratio Knuth/search = 0.000x)
+**********

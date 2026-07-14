@@ -1,0 +1,28 @@
+--- Process 2, prefix 0 ---
+Runtime = 0.0000060000 seconds
+Number of max snakes found = 13
+Maximum length snake = 12
+Search space (vertices) = 107
+Knuth estimate (0 probes) = 0.00  (ratio Knuth/search = 0.000x)
+**********
+--- Process 3, prefix 1 ---
+Runtime = 0.0000050000 seconds
+Number of max snakes found = 7
+Maximum length snake = 13
+Search space (vertices) = 87
+Knuth estimate (0 probes) = 0.00  (ratio Knuth/search = 0.000x)
+**********
+--- Process 2, prefix 2 ---
+Runtime = 0.0000030000 seconds
+Number of max snakes found = 1
+Maximum length snake = 13
+Search space (vertices) = 80
+Knuth estimate (0 probes) = 0.00  (ratio Knuth/search = 0.000x)
+**********
+--- Process 3, prefix 3 ---
+Runtime = 0.0000030000 seconds
+Number of max snakes found = 6
+Maximum length snake = 12
+Search space (vertices) = 67
+Knuth estimate (0 probes) = 0.00  (ratio Knuth/search = 0.000x)
+**********
