@@ -30,7 +30,36 @@ Generally, you will need:
 * **MPI Implementation** (`OpenMPI`)
 * **Make**
 
-Each algorithm builds independently. Navigate to any leaf folder and check its `README.md` for the exact build and run commands.
+### Quick start
+
+Two scripts at the repo root build and run either track for you:
+
+```bash
+./run_exhaustive.sh --procs 5 --oversubscribe   # dimension 6 → 26 edges, count 1
+./run_heuristic.sh serial 7 18.0                # dimension 7, 18 GB memory budget
+```
+
+`run_heuristic.sh` takes a mode and passes everything after it to the binary unchanged:
+
+| Command | Runs |
+|---|---|
+| `./run_heuristic.sh serial 7 18.0` | `snake_in_box` — direct fitness-pruned BFS |
+| `./run_heuristic.sh parallel 7 18.0 10` | `parallel_search` — same search, OpenMP across 10 workers |
+| `./run_heuristic.sh priming 8 18.0 seed.txt` | `priming` — grow a seed one dimension at a time |
+| `./run_heuristic.sh extend 8 18.0 --both-ends seed.txt` | `extend_snake` — jump a seed straight to dimension 8 |
+
+`run_exhaustive.sh` rebuilds with the right compile-time defines, then runs under `mpirun`:
+
+| Command | Runs |
+|---|---|
+| `./run_exhaustive.sh --dim 8 --prefix-length 18 --procs 16` | dimension 8, prefix depth 18, 16 MPI ranks |
+| `./run_exhaustive.sh --dim 8 --slice-count 64 --slice-id 0 --replay` | slice 0 of 64, dispatcher-free build |
+| `./run_exhaustive.sh -D KNUTH_PROBES=1000 -D PROBE_ONLY=1` | any other `config.hpp` knob |
+| `./run_exhaustive.sh --decode exhaustive/job_outputs/…/foo.bin` | print the snakes in a result file |
+
+Pass `--help` to either script for the full option list.
+
+Alternatively, each algorithm builds independently — navigate to any leaf folder and check its `README.md` for the exact build and run commands.
 
 
 ## License
@@ -50,6 +79,8 @@ Development of this repository was assisted by AI coding tools. All reported sna
 ## Structure
 ```text
 snake-in-the-box/
+├── run_exhaustive.sh
+├── run_heuristic.sh
 ├── exhaustive/
 │   ├── dfs_search/
 │   └── job_outputs/

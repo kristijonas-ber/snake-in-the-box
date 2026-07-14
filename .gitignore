@@ -2,7 +2,6 @@
 .vscode/
 .claude/
 plots/
-CLAUDE.md
 *maxSnakes*.txt
 *.o
 __pycache__/
