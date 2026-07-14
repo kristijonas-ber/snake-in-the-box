@@ -1,0 +1,204 @@
+/* search.cpp — DFS engine implementation (ported verbatim from v13's logic).
+ *
+ * The only mechanical change from v13 is that the search state is member data
+ * of a Search object instead of file-static globals, and the bitsets are
+ * std::bitset<VERTICES> instead of hand-rolled uint64_t words (identical
+ * semantics; at -O3 both lower to the same word ops).
+ */
+#include "search.hpp"
+#include <cstdlib>
+#include <cstring>
+
+/* Lift `vertex` onto the snake head: update visited / blocked / forbidden /
+ * availCount, mirroring the dfs() place step. */
+void Search::place(int vertex, int length)
+{
+    if (blocked[vertex] <= 1) availCount--;
+    visited.set(vertex);
+    snake[length] = vertex;
+    for (int j = 0; j < N; j++)
+    {
+        int u = vertex ^ (1 << j);
+        if (!visited.test(u) && blocked[u] == 1) availCount--;
+        blocked[u]++;
+        if (blocked[u] == 2) forbidden.set(u);
+    }
+}
+
+/* Exact reverse of place(). */
+void Search::unplace(int vertex)
+{
+    for (int j = 0; j < N; j++)
+    {
+        int u = vertex ^ (1 << j);
+        if (blocked[u] == 2) forbidden.reset(u);
+        blocked[u]--;
+        if (!visited.test(u) && blocked[u] == 1) availCount++;
+    }
+    visited.reset(vertex);
+    if (blocked[vertex] <= 1) availCount++;
+}
+
+void Search::emitSnake(int length)
+{
+    unsigned char buf[MAX_LENGTH];
+    for (int i = 1; i < length; i++)
+        buf[i - 1] = (unsigned char)sib_ctz((unsigned)(snake[i] ^ snake[i - 1]));
+    fwrite(buf, 1, (size_t)(length - 1), outFile);
+}
+
+/* DFS with A1 incremental adjacency + availCount B&B. Candidate w = vertex^(1<<j)
+ * is a head-neighbour by construction, so "w is valid" reduces to two bit tests:
+ * !visited[w] && !forbidden[w] (forbidden[w] iff blocked[w] >= 2). */
+void Search::dfs(int vertex, int length, int transitionCounter)
+{
+    place(vertex, length);
+    vertexCounter++;
+    length++;
+
+    if (length > maxLength)
+    {
+        maxLength = length;
+        maxSnakeCounter = 0;
+    }
+    if (length == maxLength)
+        maxSnakeCounter++;
+
+    if (length == targetLength && outFile)
+    {
+        emitSnake(length);
+        emitCount++;
+    }
+
+    int target = (targetLength > 0) ? targetLength : maxLength;
+    if (length + availCount >= target)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            int NextVertex = vertex ^ (1 << j);
+            if (visited.test(NextVertex) || forbidden.test(NextVertex))
+                continue;
+            if (NextVertex >= (1 << transitionCounter))
+            {
+                if (NextVertex - vertex == (1 << transitionCounter))
+                    transitionCounter++;
+                else
+                    continue;
+            }
+            dfs(NextVertex, length, transitionCounter);
+            if (NextVertex - vertex == (1 << (transitionCounter - 1)))
+                transitionCounter--;
+        }
+    }
+
+    unplace(vertex);
+}
+
+void Search::dfs_from_prefix(const int *vertices, int transitionCounter)
+{
+    visited.reset();
+    forbidden.reset();
+    memset(blocked, 0, sizeof(blocked));
+    maxLength = 0;
+    maxSnakeCounter = 0;
+    emitCount = 0;
+    vertexCounter = 0;
+
+    for (int i = 0; i < PREFIX_LENGTH - 1; i++)
+    {
+        int v = vertices[i];
+        snake[i] = v;
+        visited.set(v);
+        for (int j = 0; j < N; j++)
+        {
+            int u = v ^ (1 << j);
+            blocked[u]++;
+            if (blocked[u] == 2) forbidden.set(u);
+        }
+    }
+    availCount = 0;
+    for (int v = 0; v < VERTICES; v++)
+        if (!visited.test(v) && blocked[v] <= 1) availCount++;
+
+    int last = vertices[PREFIX_LENGTH - 1];
+    dfs(last, PREFIX_LENGTH - 1, transitionCounter);
+}
+
+/* ----- Knuth (1975) random-probing estimator (unchanged formula) ----- */
+double Search::knuth_probe(int vertex, int length, int transitionCounter)
+{
+    visited.set(vertex);
+    snake[length] = vertex;
+    for (int j = 0; j < N; j++)
+    {
+        int u = vertex ^ (1 << j);
+        blocked[u]++;
+        if (blocked[u] == 2) forbidden.set(u);
+    }
+    length++;
+
+    int kids[N], kidTC[N];
+    int nkids = 0;
+    for (int j = 0; j < N; j++)
+    {
+        int next = vertex ^ (1 << j);
+        if (visited.test(next) || forbidden.test(next)) continue;
+        int useTC = transitionCounter;
+        if (next >= (1 << transitionCounter))
+        {
+            if (next - vertex == (1 << transitionCounter))
+                useTC = transitionCounter + 1;
+            else
+                continue;
+        }
+        kids[nkids]  = next;
+        kidTC[nkids] = useTC;
+        nkids++;
+    }
+
+    double est;
+    if (nkids == 0)
+        est = 1.0;
+    else
+    {
+        int pick = rand() % nkids;
+        double sub = knuth_probe(kids[pick], length, kidTC[pick]);
+        est = 1.0 + (double)nkids * sub;
+    }
+
+    for (int j = 0; j < N; j++)
+    {
+        int u = vertex ^ (1 << j);
+        if (blocked[u] == 2) forbidden.reset(u);
+        blocked[u]--;
+    }
+    visited.reset(vertex);
+    return est;
+}
+
+double Search::knuth_estimate_prefix(const int *vertices, int transitionCounter, int probes)
+{
+    if (probes <= 0) return 0.0;
+
+    visited.reset();
+    forbidden.reset();
+    memset(blocked, 0, sizeof(blocked));
+    for (int i = 0; i < PREFIX_LENGTH - 1; i++)
+    {
+        int v = vertices[i];
+        snake[i] = v;
+        visited.set(v);
+        for (int j = 0; j < N; j++)
+        {
+            int u = v ^ (1 << j);
+            blocked[u]++;
+            if (blocked[u] == 2) forbidden.set(u);
+        }
+    }
+    int last = vertices[PREFIX_LENGTH - 1];
+
+    double sum = 0.0;
+    for (int p = 0; p < probes; p++)
+        sum += knuth_probe(last, PREFIX_LENGTH - 1, transitionCounter);
+    return sum / (double)probes;
+}

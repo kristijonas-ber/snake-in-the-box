@@ -39,22 +39,20 @@ bool save_snake_result(const int *transitions, size_t len, int dimension)
     ensure_dir("seeds");
     ensure_dir("snakes");
 
-    /* Find a shared title that clobbers neither the seed nor the snake file.
-       A discoverer's surname (dim15_len10375_bernatonis.txt) is appended by hand,
-       never here. */
+    /* Find a shared title that clobbers neither the seed nor the snake file. */
     char seed_path[512];
     char snake_path[512];
     for (int k = 1;; k++) {
         if (k == 1) {
             snprintf(seed_path, sizeof(seed_path),
-                     "seeds/dim%d_len%zu.txt", dimension, len);
+                     "seeds/%dD_L%zu.txt", dimension, len);
             snprintf(snake_path, sizeof(snake_path),
-                     "snakes/dim%d_len%zu.txt", dimension, len);
+                     "snakes/%dD_L%zu.txt", dimension, len);
         } else {
             snprintf(seed_path, sizeof(seed_path),
-                     "seeds/dim%d_len%zu_%d.txt", dimension, len, k);
+                     "seeds/%dD_L%zu_%d.txt", dimension, len, k);
             snprintf(snake_path, sizeof(snake_path),
-                     "snakes/dim%d_len%zu_%d.txt", dimension, len, k);
+                     "snakes/%dD_L%zu_%d.txt", dimension, len, k);
         }
         if (!path_exists(seed_path) && !path_exists(snake_path)) {
             break;

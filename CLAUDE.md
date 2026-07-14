@@ -14,19 +14,22 @@ This repo (remote: `github.com/kristijonas-ber/snake-in-the-box`) holds the
 Snake-in-the-Box project: exhaustive and heuristic search for the
 longest induced path (a *snake*) in an n-dimensional hypercube.
 
-Start with [`README.md`](README.md) for the project overview. Two search tracks
-live at the top level:
+[`README.md`](README.md) is the **single, authoritative guide** to the codebase —
+algorithms, parameters, build commands, file formats, results. The per-track
+READMEs were folded into it; do not recreate them. Two search tracks live at the
+top level:
 
-- **Exhaustive** — [`exhaustive/dfs_search/`](exhaustive/dfs_search/README.md):
-  canonical-augmentation DFS over MPI. Search knobs (`N`, `PREFIX_LENGTH`,
-  `SLICE_COUNT`/`SLICE_ID`, …) are **compile-time** `-D` defines; see
+- **Exhaustive** — `exhaustive/dfs_search/`: canonical-augmentation DFS over MPI.
+  Search knobs (`N`, `PREFIX_LENGTH`, `SLICE_COUNT`/`SLICE_ID`, …) are
+  **compile-time** `-D` defines; see
   [`config.hpp`](exhaustive/dfs_search/config.hpp).
-- **Heuristic** — [`heuristic/pruned_bfs_search/`](heuristic/pruned_bfs_search/README.md):
-  fitness-pruned BFS beam search. Four binaries (`snake_in_box`,
-  `parallel_search`, `priming`, `extend_snake`) taking **runtime** args.
+- **Heuristic** — `heuristic/pruned_bfs_search/`: fitness-pruned BFS beam search.
+  Four binaries (`snake_in_box`, `parallel_search`, `priming`, `extend_snake`)
+  taking **runtime** args.
 
-Each track's `README.md` is authoritative for what its code does — don't
-duplicate that here. Operational/HPC detail lives in this file (below).
+Only the Windows ports keep their own READMEs (under each track's `windows/`).
+Operational/HPC detail lives in this file (below); everything else belongs in
+`README.md`.
 
 Both `exhaustive/history/` and `heuristic/history/` hold superseded earlier
 implementations, kept for reference and gitignored. `plots/` is likewise

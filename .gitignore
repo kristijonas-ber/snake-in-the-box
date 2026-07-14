@@ -4,6 +4,10 @@
 plots/
 *maxSnakes*.txt
 *.o
+*.obj
+*.exe
+*.lib
+*.pdb
 __pycache__/
 *.pyc
 exhaustive/history/
@@ -16,6 +20,4 @@ heuristic/pruned_bfs_search/priming
 heuristic/pruned_bfs_search/parallel_search
 heuristic/pruned_bfs_search/pruned_bfs
 heuristic/fails/*/snake_in_box
-**/windows/
-**/slurm/
 **/snakes_dfs_search/

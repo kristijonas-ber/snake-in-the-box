@@ -2,7 +2,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$REPO_ROOT/exhaustive/dfs_search"
+TRACK_ROOT="$REPO_ROOT/exhaustive"
+SRC_DIR="$TRACK_ROOT/dfs_search"
 
 usage() {
     cat <<'EOF'
@@ -89,19 +90,19 @@ if [ -n "$decode_file" ]; then
     decode_file="$(cd "$(dirname "$decode_file")" && pwd)/$(basename "$decode_file")"
 fi
 
-cd "$SRC_DIR"
-
 if [ "$do_clean" -eq 1 ]; then
-    echo "+ make clean" >&2
-    make clean
+    echo "+ make -C exhaustive/dfs_search clean" >&2
+    make -C "$SRC_DIR" clean >&2
 fi
 
-echo "+ make DEFS=\"${defs[*]-}\"" >&2
-make DEFS="${defs[*]-}"
+echo "+ make -C exhaustive/dfs_search DEFS=\"${defs[*]-}\"" >&2
+make -C "$SRC_DIR" DEFS="${defs[*]-}" >&2
+
+cd "$TRACK_ROOT"
 
 if [ -n "$decode_file" ]; then
-    echo "+ ./dfs_search --decode $decode_file" >&2
-    exec ./dfs_search --decode "$decode_file"
+    echo "+ (cd exhaustive && dfs_search/dfs_search --decode $decode_file)" >&2
+    exec dfs_search/dfs_search --decode "$decode_file"
 fi
 
 if [ "$binary" = "dfs_search" ] && [ "$procs" -lt 2 ]; then
@@ -119,7 +120,7 @@ cmd+=(-n "$procs")
 if [ "${#mpirun_args[@]}" -gt 0 ]; then
     cmd+=("${mpirun_args[@]}")
 fi
-cmd+=("./$binary")
+cmd+=("dfs_search/$binary")
 
-echo "+ ${cmd[*]}" >&2
+echo "+ (cd exhaustive && ${cmd[*]})" >&2
 exec "${cmd[@]}"

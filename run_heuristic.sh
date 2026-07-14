@@ -2,7 +2,9 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$REPO_ROOT/heuristic/pruned_bfs_search"
+TRACK_ROOT="$REPO_ROOT/heuristic"
+SRC_DIR="$TRACK_ROOT/pruned_bfs_search"
+ORIG_PWD="$PWD"
 
 usage() {
     cat <<'EOF'
@@ -55,14 +57,36 @@ case "$mode" in
         ;;
 esac
 
-cd "$SRC_DIR"
+args=()
+for a in "$@"; do
+    if [ -e "$ORIG_PWD/$a" ] && [ "${a#-}" = "$a" ]; then
+        args+=("$(cd "$(dirname "$ORIG_PWD/$a")" && pwd)/$(basename "$a")")
+    else
+        args+=("$a")
+    fi
+done
+
+make_args=("$target")
 
 if [ "$mode" = "parallel" ] && [ "$(uname -s)" = "Darwin" ]; then
-    export OMPFLAGS="${OMPFLAGS:--Xpreprocessor -fopenmp -lomp}"
+    if [ -n "${OMPFLAGS:-}" ]; then
+        make_args+=("OMPFLAGS=$OMPFLAGS")
+    else
+        omp_prefix="$(brew --prefix libomp 2>/dev/null || true)"
+        if [ -z "$omp_prefix" ] || [ ! -d "$omp_prefix" ]; then
+            echo "run_heuristic.sh: libomp not found; parallel mode needs OpenMP." >&2
+            echo "  install it with:  brew install libomp" >&2
+            echo "  or set OMPFLAGS yourself to override." >&2
+            exit 1
+        fi
+        make_args+=("OMPFLAGS=-Xpreprocessor -fopenmp -I$omp_prefix/include -L$omp_prefix/lib -lomp")
+    fi
 fi
 
-echo "+ make $target" >&2
-make "$target"
+echo "+ make -C ${SRC_DIR#"$REPO_ROOT"/} ${make_args[*]}" >&2
+make -C "$SRC_DIR" "${make_args[@]}" >&2
 
-echo "+ ./$target $*" >&2
-exec "./$target" "$@"
+cd "$TRACK_ROOT"
+
+echo "+ (cd heuristic && pruned_bfs_search/$target ${args[*]-})" >&2
+exec "pruned_bfs_search/$target" ${args[@]+"${args[@]}"}
