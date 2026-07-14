@@ -17,7 +17,7 @@ $n$-dimensional hypercube graph $Q_n$.
 | Dimension | 1 | 2 | 3 | 4 | 5 | 6 |
 |---|---|---|---|---|---|---|
 | **Longest snake (edges)** | 1 | 2 | 4 | 7 | 13 | 26 |
-| **Distinct longest snakes** | 1 | 1 | 1 | 1 | 8 | 1 |
+| **Canonical longest snakes** | 1 | 1 | 1 | 1 | 8 | 1 |
 
 $Q_7$ (50 edges) is reachable on a single machine given hours; $Q_8$ (98) is not.
 
