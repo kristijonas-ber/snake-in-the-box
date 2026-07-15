@@ -14,10 +14,10 @@ $n$-dimensional hypercube $Q_n$. There are two approaches to this problem.
 
 The exhaustive track has proven the exact maximum for every dimension up to $7$, along with the number of canonical longest snakes.
 
-| Dimension | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
-|---|---|---|---|---|---|---|---|
-| **Longest snake (edges)** | 1 | 2 | 4 | 7 | 13 | 26 | 50 |
-| **Canonical longest snakes** | 1 | 1 | 1 | 1 | 8 | 1 | 12 |
+| Dimension | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|
+| **Longest snake (edges)** | 1 | 2 | 4 | 7 | 13 | 26 | 50 | 98 |
+| **Canonical longest snakes** | 1 | 1 | 1 | 1 | 8 | 1 | 12 | N/A |
 
 Beyond that the maximum is unknown, so the heuristic track chases lower bounds; the longest snakes it has seeds for are these, each credited to its discoverer.
 
