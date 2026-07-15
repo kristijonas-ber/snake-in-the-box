@@ -3,6 +3,7 @@
 .claude/
 plots/
 __pycache__/
+workstation.md
 
 *maxSnakes*.txt
 
