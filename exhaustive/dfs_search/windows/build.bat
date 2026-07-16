@@ -46,7 +46,7 @@ del /q prefixgen.obj search.obj driver_main.obj driver_replay.obj prefixgen_tool
 
 REM ---- generator: no MS-MPI needed --------------------------------------------
 echo Compiling prefixgen_tool (DEFS=%DEFS%) ...
-cl %CXXFLAGS% %DEFS% /c /TC prefixgen.cpp driver_prefixgen.cpp
+cl %CXXFLAGS% %DEFS% /c prefixgen.cpp driver_prefixgen.cpp
 if errorlevel 1 exit /b 1
 cl /nologo prefixgen.obj driver_prefixgen.obj /Fe:prefixgen_tool.exe
 if errorlevel 1 exit /b 1
@@ -65,7 +65,7 @@ if "%MSMPI_INC%"=="" (
 set LIBS="%MSMPI_LIB64%\msmpi.lib"
 
 echo Compiling MPI translation units ...
-cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c /TC search.cpp driver_main.cpp driver_replay.cpp
+cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c search.cpp driver_main.cpp driver_replay.cpp
 if errorlevel 1 exit /b 1
 
 echo Linking dfs_search.exe ...
