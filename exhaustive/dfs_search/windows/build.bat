@@ -25,7 +25,7 @@ REM                    mpiexec -n 5 dfs_search.exe
 REM ============================================================================
 setlocal
 
-set CXXFLAGS=/O2 /EHsc /std:c++17 /nologo /W3
+set CXXFLAGS=/O2 /EHsc /std:c++17 /nologo /W3 /D_CRT_SECURE_NO_WARNINGS
 
 set NDEF=
 set PLDEF=
@@ -65,7 +65,11 @@ if "%MSMPI_INC%"=="" (
 set LIBS="%MSMPI_LIB64%\msmpi.lib"
 
 echo Compiling MPI translation units ...
-cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c search.cpp driver_main.cpp driver_replay.cpp
+cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c search.cpp
+if errorlevel 1 exit /b 1
+cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c driver_main.cpp
+if errorlevel 1 exit /b 1
+cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c driver_replay.cpp
 if errorlevel 1 exit /b 1
 
 echo Linking dfs_search.exe ...
