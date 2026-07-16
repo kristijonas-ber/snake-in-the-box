@@ -1,11 +1,12 @@
 #pragma once
 
-#include <cstdio>
 #include <string>
 
 #ifdef _WIN32
 #include <direct.h>
+#include <io.h>
 #else
+#include <cstdio>
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
@@ -18,47 +19,54 @@ static inline bool ensureDirRecursive(const char *path)
     for (char &c : cur)
         if (c == '\\') c = '/';
 
-    for (size_t i = 1; i <= cur.size(); i++)
+    std::string part;
+    for (size_t i = 0; i < cur.size(); i++)
     {
-        if (i < cur.size() && cur[i] != '/')
+        char c = cur[i];
+        part.push_back(c);
+        if (c != '/')
             continue;
 
-        std::string part = cur.substr(0, i);
         while (!part.empty() && part.back() == '/')
             part.pop_back();
         if (part.empty() || part == ".")
             continue;
 
 #ifdef _WIN32
-        if (_mkdir(part.c_str()) != 0)
+        if (_access(part.c_str(), 0) == 0)
+            continue;
+        if (_mkdir(part.c_str()) != 0 && _access(part.c_str(), 0) != 0)
+            return false;
 #else
+        struct stat st;
+        if (stat(part.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            continue;
         if (mkdir(part.c_str(), 0777) != 0)
-#endif
         {
-            FILE *probe = fopen(part.c_str(), "rb");
-            if (!probe) return false;
-            fclose(probe);
+            if (stat(part.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
+                return false;
         }
+#endif
     }
 
-    if (cur.back() != '/')
+    while (!part.empty() && part.back() == '/')
+        part.pop_back();
+    if (!part.empty() && part != ".")
     {
-        std::string part = cur;
-        while (!part.empty() && part.back() == '/')
-            part.pop_back();
-        if (!part.empty() && part != ".")
-        {
 #ifdef _WIN32
-            if (_mkdir(part.c_str()) != 0)
+        if (_access(part.c_str(), 0) != 0 && _mkdir(part.c_str()) != 0 && _access(part.c_str(), 0) != 0)
+            return false;
 #else
+        struct stat st;
+        if (stat(part.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
+        {
             if (mkdir(part.c_str(), 0777) != 0)
-#endif
             {
-                FILE *probe = fopen(part.c_str(), "rb");
-                if (!probe) return false;
-                fclose(probe);
+                if (stat(part.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
+                    return false;
             }
         }
+#endif
     }
 
     return true;
