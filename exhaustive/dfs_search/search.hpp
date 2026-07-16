@@ -24,6 +24,7 @@ struct Search {
     void   emitSnake(int length);
     void   dfs(int vertex, int length, int transitionCounter);
     void   dfs_from_prefix(const int *vertices, int transitionCounter);
+    void   dfs_from_partial(const int *vertices, int prefixLen, int transitionCounter);
 
     double knuth_probe(int vertex, int length, int transitionCounter);
     double knuth_estimate_prefix(const int *vertices, int transitionCounter, int probes);

@@ -81,7 +81,9 @@ void Search::dfs(int vertex, int length, int transitionCounter)
     unplace(vertex);
 }
 
-void Search::dfs_from_prefix(const int *vertices, int transitionCounter)
+// Search the subtree rooted at a prefix of `prefixLen` vertices (>= 1). Rebuilds
+// all state from the prefix, then dives from its last vertex.
+void Search::dfs_from_partial(const int *vertices, int prefixLen, int transitionCounter)
 {
     visited.reset();
     forbidden.reset();
@@ -91,7 +93,7 @@ void Search::dfs_from_prefix(const int *vertices, int transitionCounter)
     emitCount = 0;
     vertexCounter = 0;
 
-    for (int i = 0; i < PREFIX_LENGTH - 1; i++)
+    for (int i = 0; i < prefixLen - 1; i++)
     {
         int v = vertices[i];
         snake[i] = v;
@@ -107,8 +109,13 @@ void Search::dfs_from_prefix(const int *vertices, int transitionCounter)
     for (int v = 0; v < VERTICES; v++)
         if (!visited.test(v) && blocked[v] <= 1) availCount++;
 
-    int last = vertices[PREFIX_LENGTH - 1];
-    dfs(last, PREFIX_LENGTH - 1, transitionCounter);
+    int last = vertices[prefixLen - 1];
+    dfs(last, prefixLen - 1, transitionCounter);
+}
+
+void Search::dfs_from_prefix(const int *vertices, int transitionCounter)
+{
+    dfs_from_partial(vertices, PREFIX_LENGTH, transitionCounter);
 }
 
 double Search::knuth_probe(int vertex, int length, int transitionCounter)

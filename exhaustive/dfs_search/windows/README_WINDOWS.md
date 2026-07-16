@@ -1,14 +1,33 @@
 # dfs_search on Windows (MS-MPI)
 
-A Windows-buildable copy of `dfs_search_streaming_slices/`. The algorithm and MPI
+A Windows-buildable copy of the dfs_search sources. The algorithm and MPI
 usage are identical; only three portability points differ from the mac/Linux
 sources, all fixed here:
 
 | issue | mac/Linux | Windows fix (in this copy) |
 |---|---|---|
-| count-trailing-zeros | `__builtin_ctz` (GCC/Clang only) | `sib_ctz()` in `config.hpp` → `_BitScanForward` under MSVC |
+| count-trailing-zeros | `__builtin_ctz` (GCC/Clang only) | `sib_ctz()` in `config.hpp` → `_BitScanForward` under MSVC (also used by `pfxio.hpp`) |
 | checkpoint atomic swap | `rename()` replaces atomically | `remove()` then `rename()` under `_WIN32` (`driver_main.cpp`) |
 | build tool | `mpicxx` (Makefile) | `cl.exe` + MS-MPI SDK via `build.bat` |
+
+## Standalone prefix generator (no MS-MPI)
+
+`prefixgen_tool.exe` streams canonical prefixes to `.pfx` batch files and uses no
+MPI, so it builds with **only `cl.exe`** — you do not need MS-MPI installed to
+build or run it. `build.bat` builds it first and unconditionally; if `MSMPI_INC`
+is unset it builds the generator and skips the MPI binaries. Its only
+Windows-specific fix is `sib_ctz` in `pfxio.hpp` (same as the search engine).
+
+```bat
+build.bat /DN=8 /DPREFIX_LENGTH=40
+prefixgen_tool.exe prefixes 1000000
+REM args: [out_dir] [batch_size] [from_ordinal] [to_ordinal]
+```
+
+The `.pfx` files it writes are byte-identical to the mac/Linux tool's (the header
+is little-endian and the records are single bytes), so a batch generated on
+Windows can be searched on Linux and vice-versa. The DFS-over-batch-files runner
+(`dfs_from_files`) is not ported here yet; port it the same way if you need it.
 
 The MPI calls used (`Init`, `Comm_rank/size`, `Send`, `Recv`, `Bcast`,
 `Allreduce`, `Wtime`, `Finalize`) are all standard and fully supported by MS-MPI.

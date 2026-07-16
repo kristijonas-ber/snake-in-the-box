@@ -18,6 +18,9 @@ exhaustive/history/
 heuristic/history/
 exhaustive/dfs_search/dfs_search
 exhaustive/dfs_search/dfs_search_replay
+exhaustive/dfs_search/prefixgen_tool
+exhaustive/dfs_search/dfs_from_files
+exhaustive/dfs_search/subtree_search
 heuristic/pruned_bfs_search/snake_in_box
 heuristic/pruned_bfs_search/extend_snake
 heuristic/pruned_bfs_search/priming
@@ -25,3 +28,6 @@ heuristic/pruned_bfs_search/parallel_search
 heuristic/pruned_bfs_search/pruned_bfs
 heuristic/fails/*/snake_in_box
 **/snakes_dfs_search/
+exhaustive/prefixes/
+exhaustive/prefixes*/
+*.pfx

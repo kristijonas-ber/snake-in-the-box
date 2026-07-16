@@ -1,34 +1,55 @@
 @echo off
 REM ============================================================================
-REM  Build dfs_search (dispatcher) and dfs_search_replay for Windows + MS-MPI.
+REM  Build the Windows binaries for the dfs_search exhaustive track.
+REM
+REM    prefixgen_tool.exe    standalone prefix generator - needs ONLY cl.exe,
+REM                          no MS-MPI. Always built.
+REM    dfs_search.exe        dispatcher build (needs MS-MPI)
+REM    dfs_search_replay.exe worker-side replay (needs MS-MPI)
 REM
 REM  Prerequisites:
 REM    * Visual Studio with the C++ toolset (provides cl.exe).
-REM    * Microsoft MPI + MS-MPI SDK  (https://learn.microsoft.com/message-passing-interface/microsoft-mpi)
-REM      The SDK installer sets the env vars MSMPI_INC and MSMPI_LIB64.
+REM    * For the MPI binaries only: Microsoft MPI + MS-MPI SDK
+REM      (https://learn.microsoft.com/message-passing-interface/microsoft-mpi).
+REM      The SDK installer sets MSMPI_INC and MSMPI_LIB64. If those are not set,
+REM      only prefixgen_tool.exe is built.
 REM
 REM  Run this from an "x64 Native Tools Command Prompt for VS" so cl.exe is on PATH.
 REM
 REM  Override compile-time knobs by passing them as /D flags, e.g.:
-REM    build.bat /DN=6 /DPREFIX_LENGTH=11 /DSLICE_COUNT=4 /DSLICE_ID=0
+REM    build.bat /DN=8 /DPREFIX_LENGTH=40
 REM  (defaults come from config.hpp: N=6, PREFIX_LENGTH=11, one slice = full search)
 REM
-REM  Then run, e.g.:   mpiexec -n 5 dfs_search.exe
-REM                    mpiexec -n 5 dfs_search_replay.exe
+REM  Then run, e.g.:   prefixgen_tool.exe prefixes 1000000
+REM                    mpiexec -n 5 dfs_search.exe
 REM ============================================================================
 setlocal
 
+set DEFS=%*
+set CXXFLAGS=/O2 /EHsc /std:c++17 /nologo /W3
+
+REM ---- generator: no MS-MPI needed --------------------------------------------
+echo Compiling prefixgen_tool (DEFS=%DEFS%) ...
+cl %CXXFLAGS% %DEFS% /c prefixgen.cpp driver_prefixgen.cpp
+if errorlevel 1 exit /b 1
+cl /nologo prefixgen.obj driver_prefixgen.obj /Fe:prefixgen_tool.exe
+if errorlevel 1 exit /b 1
+echo Built prefixgen_tool.exe
+
+REM ---- MPI binaries: need MS-MPI ----------------------------------------------
 if "%MSMPI_INC%"=="" (
-  echo ERROR: MSMPI_INC not set. Install the MS-MPI SDK and reopen the VS prompt.
-  exit /b 1
+  echo.
+  echo NOTE: MSMPI_INC not set - skipping dfs_search.exe / dfs_search_replay.exe.
+  echo       prefixgen_tool.exe was built and needs no MPI. Install the MS-MPI SDK
+  echo       and reopen the VS prompt to build the search binaries.
+  endlocal
+  exit /b 0
 )
 
-set DEFS=%*
-set CXXFLAGS=/O2 /EHsc /std:c++17 /nologo /W3 /I"%MSMPI_INC%"
 set LIBS="%MSMPI_LIB64%\msmpi.lib"
 
-echo Compiling (DEFS=%DEFS%) ...
-cl %CXXFLAGS% %DEFS% /c prefixgen.cpp search.cpp driver_main.cpp driver_replay.cpp
+echo Compiling MPI translation units ...
+cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c search.cpp driver_main.cpp driver_replay.cpp
 if errorlevel 1 exit /b 1
 
 echo Linking dfs_search.exe ...
@@ -40,6 +61,7 @@ cl /nologo prefixgen.obj search.obj driver_replay.obj /Fe:dfs_search_replay.exe 
 if errorlevel 1 exit /b 1
 
 echo.
-echo Built dfs_search.exe and dfs_search_replay.exe
-echo Run:  mpiexec -n 5 dfs_search.exe
+echo Built prefixgen_tool.exe, dfs_search.exe and dfs_search_replay.exe
+echo Run:  prefixgen_tool.exe prefixes 1000000
+echo       mpiexec -n 5 dfs_search.exe
 endlocal
