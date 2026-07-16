@@ -19,6 +19,7 @@
  * is O(owned prefixes). Two passes (find L, emit-all), same as the dispatcher.
  */
 #include "config.hpp"
+#include "dirutil.hpp"
 #include "prefixgen.hpp"
 #include "search.hpp"
 
@@ -29,13 +30,6 @@
 #include <ctime>
 #include <vector>
 #include <sys/stat.h>
-
-#ifdef _WIN32
-#include <direct.h>
-#define MAKEDIR(path) _mkdir(path)
-#else
-#define MAKEDIR(path) mkdir((path), 0777)
-#endif
 
 /* ----- decode helpers (same format as driver_main.cpp) ----- */
 static int decodeFile(const char *path)
@@ -193,7 +187,12 @@ int main(int argc, char **argv)
      * (walk) order, so we index it with a running owned-counter to recover each
      * owned prefix's pass-1 maxLength without recomputing it. */
     double t_pass2 = MPI_Wtime();
-    MAKEDIR("job_outputs"); MAKEDIR("job_outputs/snakes_dfs_search");
+    if (!ensureDirRecursive("job_outputs/snakes_dfs_search"))
+    {
+        fprintf(stderr, "cannot create output dir job_outputs/snakes_dfs_search\n");
+        MPI_Finalize();
+        return 1;
+    }
 
     char binPath[96];
     snprintf(binPath, sizeof(binPath),

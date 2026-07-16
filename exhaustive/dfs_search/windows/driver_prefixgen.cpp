@@ -14,6 +14,7 @@
 // Defaults: out_dir=prefixes, batch_size=1000000, from=0, to=all.
 
 #include "config.hpp"
+#include "dirutil.hpp"
 #include "prefixgen.hpp"
 #include "pfxio.hpp"
 
@@ -23,13 +24,6 @@
 #include <csignal>
 #include <climits>
 #include <sys/stat.h>
-
-#ifdef _WIN32
-#include <direct.h>
-#define MAKEDIR(path) _mkdir(path)
-#else
-#define MAKEDIR(path) mkdir((path), 0777)
-#endif
 
 static volatile sig_atomic_t g_stop = 0;
 static void onSignal(int) { g_stop = 1; }
@@ -44,7 +38,11 @@ int main(int argc, char **argv)
     if (batchSize == 0) batchSize = 1;
     if (to <= from) { fprintf(stderr, "prefixgen_tool: 'to' must be greater than 'from'\n"); return 1; }
 
-    MAKEDIR(outDir);
+    if (!ensureDirRecursive(outDir))
+    {
+        fprintf(stderr, "prefixgen_tool: cannot create output dir %s\n", outDir);
+        return 1;
+    }
 
     signal(SIGINT,  onSignal);
     signal(SIGTERM, onSignal);

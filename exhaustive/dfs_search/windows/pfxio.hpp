@@ -14,6 +14,7 @@
 //   record : (PREFIX_LENGTH-1) transition bytes | 1 transitionCounter byte
 #pragma once
 #include "config.hpp"
+#include "dirutil.hpp"
 #include "prefixgen.hpp"
 
 #include <cstdio>
@@ -85,6 +86,11 @@ struct PfxWriter {
 
     bool openNext()
     {
+        if (!ensureDirRecursive(dir.c_str()))
+        {
+            fprintf(stderr, "pfxio: cannot create output dir %s\n", dir.c_str());
+            return false;
+        }
         char path[512];
         snprintf(path, sizeof(path), "%s/batch_%05d.pfx", dir.c_str(), fileIdx);
         f = fopen(path, "wb");

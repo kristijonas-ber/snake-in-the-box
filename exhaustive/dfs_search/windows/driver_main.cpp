@@ -14,6 +14,7 @@
  *   PASS2 : dispatch only the prefixes that reached L, stream all length-L snakes.
  */
 #include "config.hpp"
+#include "dirutil.hpp"
 #include "prefixgen.hpp"
 #include "search.hpp"
 
@@ -24,13 +25,6 @@
 #include <ctime>
 #include <vector>
 #include <sys/stat.h>
-
-#ifdef _WIN32
-#include <direct.h>
-#define MAKEDIR(path) _mkdir(path)
-#else
-#define MAKEDIR(path) mkdir((path), 0777)
-#endif
 
 /* ----- decode helpers (unchanged from v13) ----- */
 static int decodeFile(const char *path)
@@ -423,7 +417,12 @@ int main(int argc, char **argv)
         for (int r = 1; r < size; r++) count2 += perRank[r];
 
 #if !PROBE_ONLY
-        MAKEDIR("job_outputs"); MAKEDIR("job_outputs/snakes_dfs_search");
+        if (!ensureDirRecursive("job_outputs/snakes_dfs_search"))
+        {
+            fprintf(stderr, "cannot create output dir job_outputs/snakes_dfs_search\n");
+            MPI_Finalize();
+            return 1;
+        }
         char mpath[96];
         snprintf(mpath, sizeof(mpath), "job_outputs/snakes_dfs_search/%dD_L%d_manifest.txt", N, L);
         FILE *m = fopen(mpath, "w");
@@ -547,7 +546,12 @@ int main(int argc, char **argv)
         MPI_Bcast(&L, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 #if !PROBE_ONLY
-        MAKEDIR("job_outputs"); MAKEDIR("job_outputs/snakes_dfs_search");
+        if (!ensureDirRecursive("job_outputs/snakes_dfs_search"))
+        {
+            fprintf(stderr, "cannot create output dir job_outputs/snakes_dfs_search\n");
+            MPI_Finalize();
+            return 1;
+        }
         char path[96];
         snprintf(path, sizeof(path), "job_outputs/snakes_dfs_search/%dD_L%d_rank%d.bin", N, L, rank);
         FILE *f = fopen(path, "wb");
