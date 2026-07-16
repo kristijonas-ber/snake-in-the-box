@@ -24,6 +24,8 @@ static inline bool ensureDirRecursive(const char *path)
             continue;
 
         std::string part = cur.substr(0, i);
+        while (!part.empty() && part.back() == '/')
+            part.pop_back();
         if (part.empty() || part == ".")
             continue;
 
@@ -36,6 +38,26 @@ static inline bool ensureDirRecursive(const char *path)
             FILE *probe = fopen(part.c_str(), "rb");
             if (!probe) return false;
             fclose(probe);
+        }
+    }
+
+    if (cur.back() != '/')
+    {
+        std::string part = cur;
+        while (!part.empty() && part.back() == '/')
+            part.pop_back();
+        if (!part.empty() && part != ".")
+        {
+#ifdef _WIN32
+            if (_mkdir(part.c_str()) != 0)
+#else
+            if (mkdir(part.c_str(), 0777) != 0)
+#endif
+            {
+                FILE *probe = fopen(part.c_str(), "rb");
+                if (!probe) return false;
+                fclose(probe);
+            }
         }
     }
 
