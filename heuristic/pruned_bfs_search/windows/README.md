@@ -105,6 +105,25 @@ snake_in_box.exe 7
 `parallel_search.exe`. MSVC's `/openmp` (OpenMP 2.0) covers every construct the
 parallel search uses.
 
+#### Chained cross-dimension extension (`chain_extend.bat`)
+
+`chain_extend.bat` automates a multi-dimension climb: it grows a seed one
+dimension at a time from `start_dim` to `end_dim`, feeding each step's result in
+as the next step's seed, under a fixed per-step RAM budget (what the beam prunes
+against). Unlike `priming.exe` — which chains internally but saves only the final
+snake — this runs `extend_snake.exe` per dimension, so **every** dimension's
+result is saved.
+
+```bat
+cd pruned_bfs_search\windows
+chain_extend.bat dim13_seed.txt 13 20 64 --both-ends
+```
+
+Results land under `chain_out\dim<D>\{seeds,snakes}\` for each `D` from
+`start_dim+1` to `end_dim`; the `seeds\` copy of one step is the reusable input to
+the next. Any flags after the RAM budget (e.g. `--both-ends`) pass straight
+through to `extend_snake.exe`. Override the output root by setting `CHAIN_OUT`.
+
 **MinGW-w64 / Clang on Windows** don't need the build script — they support the
 `__builtin_*` path and `-fopenmp`, so the GNU `Makefile` above works unchanged.
 
