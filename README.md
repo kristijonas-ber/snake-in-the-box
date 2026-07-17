@@ -107,7 +107,7 @@ mpirun --oversubscribe -n 5 dfs_search/dfs_search
 
 ## Heuristic — `heuristic/pruned_bfs_search/`
 
-The track contains four algorithms: two that search a dimension directly, and two that extend an existing snake into a higher one.
+The track contains five algorithms: two that search a dimension directly, and three that extend an existing snake into a higher one.
 
 | Algorithm | Function |
 |---|---|
@@ -115,20 +115,23 @@ The track contains four algorithms: two that search a dimension directly, and tw
 | `parallel_search` | direct search, OpenMP parallelism |
 | `priming` | extend a seed one dimension at a time up to the target |
 | `extend_snake` | extend a seed straight to the target dimension |
+| `parallel_extend` | like `extend_snake`, with OpenMP per-level parallelism |
 
 ### Parameters
 
-All four take `<dimension> <memory_gb>`; the seeded tools take seed files after that.
+All take `<dimension> <memory_gb>`; the seeded tools take seed files after that.
 
 | Argument | Meaning |
 |---|---|
 | `dimension` | dimension to search, or to extend *into* |
 | `memory_gb` | memory budget; the search prunes once it exceeds this |
-| `workers` | `parallel_search` only — OpenMP thread count |
-| `seed files` | `priming` / `extend_snake` only — a `.txt` of transition integers, or a `.bin` from the exhaustive track |
+| `workers` | `parallel_search` / `parallel_extend` only — OpenMP thread count |
+| `seed files` | `priming` / `extend_snake` / `parallel_extend` only — a `.txt` of transition integers, or a `.bin` from the exhaustive track |
 
-`extend_snake` also takes `--both-ends` (grow each seed from its other endpoint too)
-and any number of seed files at once.
+`extend_snake` and `parallel_extend` also take `--both-ends` (grow each seed from its
+other endpoint too) and any number of seed files at once. `parallel_extend` takes the
+worker count as its third argument (`<dimension> <memory_gb> <workers>`), and scales
+across one machine's cores (shared memory), sub-linearly past ~8–16 threads.
 
 ### Building by hand
 
@@ -138,6 +141,7 @@ make                  # ./snake_in_box
 make parallel_search  # macOS: OMPFLAGS="-Xpreprocessor -fopenmp -lomp"
 make priming
 make extend_snake
+make parallel_extend  # macOS: same OMPFLAGS as parallel_search
 cd ..                 # run from heuristic/
 pruned_bfs_search/snake_in_box 7 18.0
 ```
@@ -200,7 +204,7 @@ manager are provided as well.
 | C/C++ compiler | both tracks |
 | Make | both tracks |
 | OpenMPI | exhaustive track |
-| `libomp` | heuristic `parallel_search` |
+| `libomp` | heuristic `parallel_search`, `parallel_extend` (macOS only) |
 
 | Platform | Path |
 |---|---|

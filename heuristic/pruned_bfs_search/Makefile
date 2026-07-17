@@ -6,6 +6,7 @@
 #   make extend_snake  - build ./extend_snake (seed the beam with an existing snake)
 #   make priming       - build ./priming (extend a seed one dimension at a time)
 #   make parallel_search - build ./parallel_search (OpenMP per-level parallelism)
+#   make parallel_extend - build ./parallel_extend (OpenMP seeded extension)
 #   make clean         - remove build artifacts
 
 CC       = cc
@@ -27,8 +28,9 @@ EXT_TARGET = extend_snake
 PRIME_OBJ = $(SHARED_OBJ) priming.o
 PRIME_TARGET = priming
 
-# The parallel tool compiles its driver with OpenMP; shared modules are plain.
+# The parallel tools compile their driver with OpenMP; shared modules are plain.
 PAR_TARGET = parallel_search
+PAREXT_TARGET = parallel_extend
 
 all: $(TARGET)
 
@@ -44,6 +46,9 @@ $(PRIME_TARGET): $(PRIME_OBJ)
 $(PAR_TARGET): $(SHARED_OBJ) parallel_search.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) -o $@ $(SHARED_OBJ) parallel_search.c
 
+$(PAREXT_TARGET): $(SHARED_OBJ) parallel_extend.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) -o $@ $(SHARED_OBJ) parallel_extend.c
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -52,6 +57,7 @@ run: $(TARGET)
 
 clean:
 	rm -f $(OBJ) snake_io.o extend_snake.o priming.o parallel_search.o \
-	      $(TARGET) $(EXT_TARGET) $(PRIME_TARGET) $(PAR_TARGET)
+	      parallel_extend.o \
+	      $(TARGET) $(EXT_TARGET) $(PRIME_TARGET) $(PAR_TARGET) $(PAREXT_TARGET)
 
 .PHONY: all run clean

@@ -96,16 +96,24 @@ which `_BitScanForward64` in `bitops.h` requires) and run the build script:
 cd pruned_bfs_search\windows
 build.bat
 parallel_search.exe 7 18.0 10
+parallel_extend.exe 14 18.0 16 --both-ends ..\..\seeds\dim13_len2854_ace.txt
 priming.exe 8 18.0 extend_input.txt
 snake_in_box.exe 7
 ```
 
-`build.bat` compiles the four executables **in this `windows\` folder** (it builds
+`build.bat` compiles the five executables **in this `windows\` folder** (it builds
 the MSVC-portable copies here, which include `bitops.h`; it must not build the
 parent's GCC sources, whose `__builtin_*` calls MSVC leaves unresolved at link).
-It passes `/openmp` for `parallel_search.exe`; MSVC's `/openmp` (OpenMP 2.0)
-covers every construct the parallel search uses. The `.exe` files, and any
+It passes `/openmp` for `parallel_search.exe` and `parallel_extend.exe`; MSVC's
+`/openmp` (OpenMP 2.0) covers every construct they use. The `.exe` files, and any
 `seeds\`/`snakes\` output, stay under `windows\`.
+
+`parallel_extend.exe` is the **parallel seeded extender**: same seeds, beam, and
+fitness pruning as `extend_snake.exe`, but each BFS level's expansion is spread
+across `<workers>` OpenMP threads. Args:
+`parallel_extend.exe <target_dim> [memory_gb] [workers] [--both-ends] [seed ...]`.
+It parallelizes on one machine's cores (shared memory), with sub-linear scaling
+past ~8–16 threads.
 
 #### Chained cross-dimension extension (`chain_extend.bat`)
 
@@ -136,6 +144,33 @@ overwriting. Any flags after the RAM budget (e.g. `--both-ends`) pass straight
 through to `extend_snake.exe`. Two env-var overrides: `CHAIN_ROOT` sets the
 results root (default `results\` in the current directory), and `CHAIN_NAME` sets
 an exact name for the run's subfolder instead of the auto tag.
+
+**Per-dimension RAM (`--ram-schedule`).** A node's vertex bitmap grows as `2^D`,
+so the same budget buys far fewer beam nodes at dim 20 than at dim 13 — and the
+low dimensions often finish before their beam even fills. Spend RAM where it
+bites with `--ram-schedule D:GB,D:GB,...`: each target dimension uses the nearest
+listed value at or below it, and anything below the lowest entry uses the base
+`<ram_gb>`.
+
+```bat
+chain_extend.bat ..\..\seeds\dim13_len2854_ace.txt 13 20 8 ^
+    --ram-schedule 18:64,20:128 --both-ends
+```
+
+Here dims 14–17 use the 8 GB base, 18–19 use 64 GB, and 20 uses 128 GB. The
+schedule is folded into the run-folder tag, so different schedules land in
+different result folders.
+
+**Parallel steps (`--workers N`).** Add `--workers N` to run each step with
+`parallel_extend.exe` on `N` OpenMP threads instead of the serial
+`extend_snake.exe`:
+
+```bat
+chain_extend.bat ..\..\seeds\dim13_len2854_ace.txt 13 20 64 --workers 16 --both-ends
+```
+
+The worker count is folded into the run tag (`..._w16`) too, so serial and
+parallel runs of the same budget stay in separate folders.
 
 **MinGW-w64 / Clang on Windows** don't need the build script — they support the
 `__builtin_*` path and `-fopenmp`, so the GNU `Makefile` above works unchanged.

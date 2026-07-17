@@ -14,10 +14,11 @@ Builds and runs an algorithm from heuristic/pruned_bfs_search.
 All args after <mode> are passed to the binary unchanged.
 
 Modes:
-  serial    ./snake_in_box    <dimension> [memory_gb]
-  parallel  ./parallel_search <dimension> [memory_gb] [workers]
-  priming   ./priming         <dimension> [memory_gb] [seed_file]
-  extend    ./extend_snake    <dimension> [memory_gb] [--both-ends] [seed ...]
+  serial          ./snake_in_box    <dimension> [memory_gb]
+  parallel        ./parallel_search <dimension> [memory_gb] [workers]
+  priming         ./priming         <dimension> [memory_gb] [seed_file]
+  extend          ./extend_snake    <dimension> [memory_gb] [--both-ends] [seed ...]
+  parallel-extend ./parallel_extend <dimension> [memory_gb] [workers] [--both-ends] [seed ...]
 
 Defaults are the binaries' own: dimension 7, memory 18.0 GB, 10 workers.
 
@@ -26,6 +27,7 @@ Examples:
   ./run_heuristic.sh parallel 7 18.0 10
   ./run_heuristic.sh priming 8 18.0 extend_input.txt
   ./run_heuristic.sh extend 8 18.0 --both-ends seed1.txt seed2.txt
+  ./run_heuristic.sh parallel-extend 14 18.0 16 --both-ends seeds/dim13_len2854_ace.txt
   ./run_heuristic.sh extend --help
 
 Output: snakes -> heuristic/snakes/, transition sequences -> heuristic/seeds/
@@ -41,10 +43,11 @@ mode="$1"
 shift
 
 case "$mode" in
-    serial)   target="snake_in_box"    ;;
-    parallel) target="parallel_search" ;;
-    priming)  target="priming"         ;;
-    extend)   target="extend_snake"    ;;
+    serial)          target="snake_in_box"    ;;
+    parallel)        target="parallel_search" ;;
+    priming)         target="priming"         ;;
+    extend)          target="extend_snake"    ;;
+    parallel-extend) target="parallel_extend" ;;
     -h|--help)
         usage
         exit 0
@@ -68,7 +71,7 @@ done
 
 make_args=("$target")
 
-if [ "$mode" = "parallel" ] && [ "$(uname -s)" = "Darwin" ]; then
+if { [ "$mode" = "parallel" ] || [ "$mode" = "parallel-extend" ]; } && [ "$(uname -s)" = "Darwin" ]; then
     if [ -n "${OMPFLAGS:-}" ]; then
         make_args+=("OMPFLAGS=$OMPFLAGS")
     else

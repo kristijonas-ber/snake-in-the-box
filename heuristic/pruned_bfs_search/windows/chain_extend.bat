@@ -15,11 +15,21 @@ REM    <seed_file>   text file of space/newline-separated transition integers
 REM                  (exactly what the beam / a prior step writes to seeds\).
 REM    <start_dim>   dimension the seed already lives in (e.g. 13).
 REM    <end_dim>     dimension to reach (e.g. 20).
-REM    <ram_gb>      per-step memory limit in GB; the beam prunes to fit it.
-REM    [extra flags] passed straight to extend_snake.exe, e.g. --both-ends.
+REM    <ram_gb>      base per-step memory limit in GB; the beam prunes to fit it.
+REM                  Used for any dimension the schedule below does not cover.
+REM    [extra flags] --both-ends and any other extend_snake flags, plus:
+REM      --workers N   run each step with parallel_extend.exe on N OpenMP threads
+REM        instead of the serial extend_snake.exe. Speeds up per-level expansion
+REM        (one node, shared memory); sub-linear past ~8-16 threads.
+REM      --ram-schedule D:GB,D:GB,...  per-dimension RAM overrides. A target
+REM        dimension uses the nearest listed value at or below it; anything below
+REM        the lowest entry uses <ram_gb>. Node size grows as 2^D, so spending
+REM        more RAM only at the top dimensions is usually the right shape.
 REM
-REM  Example (a Q_13 snake -> ... -> Q_20, 64 GB budget, grow both endpoints):
+REM  Examples (a Q_13 snake -> ... -> Q_20):
 REM    chain_extend.bat dim13_seed.txt 13 20 64 --both-ends
+REM    chain_extend.bat dim13_seed.txt 13 20 8 --ram-schedule 18:64,20:128 --both-ends
+REM        (dims 14-17 use 8 GB, 18-19 use 64 GB, 20 uses 128 GB)
 REM
 REM  Each run gets its OWN subfolder under the results root, tagged by its
 REM  parameters, so separate chains (e.g. different RAM budgets) never collide:
@@ -51,19 +61,51 @@ shift
 shift
 set "EXTRA="
 set "BOTHTAG="
+set "RAMSCHED="
+set "WORKERS="
 :collect
-if not "%~1"=="" (
-  if /I "%~1"=="--both-ends" set "BOTHTAG=_both"
-  set "EXTRA=!EXTRA! %~1"
+if "%~1"=="" goto :collected
+if /I "%~1"=="--ram-schedule" (
+  set "RAMSCHED=%~2"
+  shift
   shift
   goto :collect
 )
+if /I "%~1"=="--workers" (
+  set "WORKERS=%~2"
+  shift
+  shift
+  goto :collect
+)
+if /I "%~1"=="--both-ends" set "BOTHTAG=_both"
+set "EXTRA=!EXTRA! %~1"
+shift
+goto :collect
+:collected
+
+REM ---- Parse an optional per-dimension RAM schedule "D:GB,D:GB,..." ----------
+REM Each entry sets RSCHED_<D>. A target dimension uses the value of the nearest
+REM listed dimension at or below it (threshold semantics); dimensions below the
+REM lowest entry fall back to the base <ram_gb>. So "13:8,18:64,20:128" with a
+REM 13->20 chain means dims 14-17 use 8, 18-19 use 64, and 20 uses 128.
+if defined RAMSCHED (
+  for %%e in (%RAMSCHED:,= %) do (
+    for /f "tokens=1,2 delims=:" %%a in ("%%e") do set "RSCHED_%%a=%%b"
+  )
+)
 
 REM ---- Locate the binary (build.bat builds it here, in the windows folder). --
+REM --workers N -> parallel_extend.exe (OpenMP); otherwise serial extend_snake.exe.
 set "SCRIPTDIR=%~dp0"
-set "EXE=%SCRIPTDIR%extend_snake.exe"
+if defined WORKERS (
+  set "EXE=%SCRIPTDIR%parallel_extend.exe"
+  set "EXENAME=parallel_extend.exe"
+) else (
+  set "EXE=%SCRIPTDIR%extend_snake.exe"
+  set "EXENAME=extend_snake.exe"
+)
 if not exist "%EXE%" (
-  echo ERROR: extend_snake.exe not found at "%EXE%".
+  echo ERROR: %EXENAME% not found at "%EXE%".
   echo Build it first from an x64 Native Tools Command Prompt for VS:
   echo     cd /d "%SCRIPTDIR%"  ^&^&  build.bat
   exit /b 1
@@ -82,10 +124,16 @@ if %ENDDIM% LEQ %STARTDIM% (
 REM ---- Results root + a separate subfolder per chain run. --------------------
 if not defined CHAIN_ROOT set "CHAIN_ROOT=%CD%\results"
 
+set "WTAG="
+if defined WORKERS set "WTAG=_w%WORKERS%"
 if defined CHAIN_NAME (
   set "TAG=%CHAIN_NAME%"
+) else if defined RAMSCHED (
+  set "SCHEDTAG=!RAMSCHED::=-!"
+  set "SCHEDTAG=!SCHEDTAG:,=_!"
+  set "TAG=dim%STARTDIM%-%ENDDIM%_ram!SCHEDTAG!%WTAG%%BOTHTAG%"
 ) else (
-  set "TAG=dim%STARTDIM%-%ENDDIM%_ram%RAM%%BOTHTAG%"
+  set "TAG=dim%STARTDIM%-%ENDDIM%_ram%RAM%%WTAG%%BOTHTAG%"
 )
 
 set "RUNDIR=%CHAIN_ROOT%\%TAG%"
@@ -103,7 +151,16 @@ echo ============================================================
 echo  Chained seed extension
 echo    seed      : %SEED%
 echo    dimensions: %STARTDIM% -^> %ENDDIM%
-echo    RAM budget: %RAM% GB per step
+if defined RAMSCHED (
+  echo    RAM budget: %RAM% GB base, schedule %RAMSCHED%
+) else (
+  echo    RAM budget: %RAM% GB per step
+)
+if defined WORKERS (
+  echo    engine    : parallel_extend.exe, %WORKERS% workers
+) else (
+  echo    engine    : extend_snake.exe ^(serial^)
+)
 echo    extra args:%EXTRA%
 echo    run folder: %OUTROOT%
 echo ============================================================
@@ -118,14 +175,21 @@ for /L %%D in (%FIRST%,1,%ENDDIM%) do (
   if exist "!OUTDIR!\seeds"  del /q "!OUTDIR!\seeds\*.txt"  >nul 2>&1
   if not exist "!OUTDIR!" mkdir "!OUTDIR!"
 
+  REM Resolve this dimension's RAM budget (schedule override, else base).
+  call :resolve_ram %%D
+
   echo(
   echo ------------------------------------------------------------
-  echo  Extending into dimension %%D  ^(RAM %RAM% GB^)
+  echo  Extending into dimension %%D  ^(RAM !STEPRAM! GB^)
   echo  Seed: !CURSEED!
   echo ------------------------------------------------------------
 
   pushd "!OUTDIR!"
-  "%EXE%" %%D %RAM%!EXTRA! "!CURSEED!"
+  if defined WORKERS (
+    "%EXE%" %%D !STEPRAM! %WORKERS%!EXTRA! "!CURSEED!"
+  ) else (
+    "%EXE%" %%D !STEPRAM!!EXTRA! "!CURSEED!"
+  )
   set "RC=!ERRORLEVEL!"
   popd
 
@@ -160,7 +224,27 @@ echo ============================================================
 endlocal
 exit /b 0
 
+REM ---- Subroutine: set STEPRAM for target dimension %1. ----------------------
+REM Scans downward from the target to start_dim for the nearest RSCHED_<k>;
+REM falls back to the base RAM budget when none is set at or below it.
+:resolve_ram
+set "STEPRAM=%RAM%"
+set "_d=%~1"
+:rr_loop
+if %_d% LSS %STARTDIM% goto :eof
+if defined RSCHED_%_d% (
+  set "STEPRAM=!RSCHED_%_d%!"
+  goto :eof
+)
+set /a _d-=1
+goto :rr_loop
+
 :usage
-echo Usage: %~nx0 ^<seed_file^> ^<start_dim^> ^<end_dim^> ^<ram_gb^> [extra extend_snake flags]
-echo   e.g. %~nx0 dim13_seed.txt 13 20 64 --both-ends
+echo Usage: %~nx0 ^<seed_file^> ^<start_dim^> ^<end_dim^> ^<ram_gb^> [extra flags]
+echo   ^<ram_gb^>  base per-step memory limit; used where the schedule is silent.
+echo   Extra flags (any order, all optional):
+echo     --workers N            parallel per-step search on N OpenMP threads
+echo     --both-ends            grow both endpoints (passed to the extender)
+echo     --ram-schedule LIST    per-dimension RAM, e.g. --ram-schedule 13:8,18:64,20:128
+echo   e.g. %~nx0 dim13_seed.txt 13 20 8 --ram-schedule 18:64,20:128 --workers 16 --both-ends
 exit /b 1

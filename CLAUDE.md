@@ -24,8 +24,9 @@ top level:
   **compile-time** `-D` defines; see
   [`config.hpp`](exhaustive/dfs_search/config.hpp).
 - **Heuristic** — `heuristic/pruned_bfs_search/`: fitness-pruned BFS beam search.
-  Four binaries (`snake_in_box`, `parallel_search`, `priming`, `extend_snake`)
-  taking **runtime** args.
+  Five binaries (`snake_in_box`, `parallel_search`, `priming`, `extend_snake`,
+  `parallel_extend`) taking **runtime** args. `parallel_extend` is the seeded
+  extender (`extend_snake`) with `parallel_search`'s OpenMP per-level expansion.
 
 Only the Windows ports keep their own READMEs (under each track's `windows/`).
 Operational/HPC detail lives in this file (below); everything else belongs in
