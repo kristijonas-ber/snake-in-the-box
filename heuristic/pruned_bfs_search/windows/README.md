@@ -119,10 +119,21 @@ cd pruned_bfs_search\windows
 chain_extend.bat dim13_seed.txt 13 20 64 --both-ends
 ```
 
-Results land under `chain_out\dim<D>\{seeds,snakes}\` for each `D` from
-`start_dim+1` to `end_dim`; the `seeds\` copy of one step is the reusable input to
-the next. Any flags after the RAM budget (e.g. `--both-ends`) pass straight
-through to `extend_snake.exe`. Override the output root by setting `CHAIN_OUT`.
+Each run gets its **own subfolder** under `results\`, tagged by its parameters, so
+separate chains never overwrite each other:
+
+```
+results\dim13-20_ram64_both\dim14\seeds\dim14_len<L>.txt    reusable seed (feeds dim 15)
+results\dim13-20_ram64_both\dim14\snakes\dim14_len<L>.txt   readable record + vertices
+results\dim13-20_ram64_both\dim15\...                        ... up to end_dim
+results\dim13-20_ram128\...                                  a different RAM = different folder
+```
+
+If the same tag is reused, a `_2`, `_3`, … suffix is appended rather than
+overwriting. Any flags after the RAM budget (e.g. `--both-ends`) pass straight
+through to `extend_snake.exe`. Two env-var overrides: `CHAIN_ROOT` sets the
+results root (default `results\` in the current directory), and `CHAIN_NAME` sets
+an exact name for the run's subfolder instead of the auto tag.
 
 **MinGW-w64 / Clang on Windows** don't need the build script — they support the
 `__builtin_*` path and `-fopenmp`, so the GNU `Makefile` above works unchanged.

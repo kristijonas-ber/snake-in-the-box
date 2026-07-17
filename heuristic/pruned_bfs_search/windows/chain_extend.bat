@@ -21,10 +21,16 @@ REM
 REM  Example (a Q_13 snake -> ... -> Q_20, 64 GB budget, grow both endpoints):
 REM    chain_extend.bat dim13_seed.txt 13 20 64 --both-ends
 REM
-REM  Output layout (created under the current directory, override with CHAIN_OUT):
-REM    chain_out\dim14\seeds\dim14_len<L>.txt   <- reusable seed (fed to dim 15)
-REM    chain_out\dim14\snakes\dim14_len<L>.txt  <- readable record + vertices
-REM    chain_out\dim15\...                       and so on up to end_dim.
+REM  Each run gets its OWN subfolder under the results root, tagged by its
+REM  parameters, so separate chains (e.g. different RAM budgets) never collide:
+REM    results\dim13-20_ram64_both\dim14\seeds\dim14_len<L>.txt  <- fed to dim 15
+REM    results\dim13-20_ram64_both\dim14\snakes\dim14_len<L>.txt <- readable record
+REM    results\dim13-20_ram64_both\dim15\...                      up to end_dim
+REM    results\dim13-20_ram128\...                               a different chain
+REM  If a tag already exists, a _2, _3, ... suffix is added so nothing is
+REM  overwritten. Overrides:
+REM    CHAIN_ROOT  results root (default: results\ in the current directory)
+REM    CHAIN_NAME  exact name for this run's subfolder (skips the auto tag)
 REM
 REM  extend_snake.exe must already be built (run build.bat from an x64 Native
 REM  Tools Command Prompt for VS first).
@@ -44,8 +50,10 @@ shift
 shift
 shift
 set "EXTRA="
+set "BOTHTAG="
 :collect
 if not "%~1"=="" (
+  if /I "%~1"=="--both-ends" set "BOTHTAG=_both"
   set "EXTRA=!EXTRA! %~1"
   shift
   goto :collect
@@ -71,8 +79,25 @@ if %ENDDIM% LEQ %STARTDIM% (
   exit /b 1
 )
 
-if not defined CHAIN_OUT set "CHAIN_OUT=%CD%\chain_out"
-set "OUTROOT=%CHAIN_OUT%"
+REM ---- Results root + a separate subfolder per chain run. --------------------
+if not defined CHAIN_ROOT set "CHAIN_ROOT=%CD%\results"
+
+if defined CHAIN_NAME (
+  set "TAG=%CHAIN_NAME%"
+) else (
+  set "TAG=dim%STARTDIM%-%ENDDIM%_ram%RAM%%BOTHTAG%"
+)
+
+set "RUNDIR=%CHAIN_ROOT%\%TAG%"
+set /a _n=1
+:findfree
+if exist "%RUNDIR%" (
+  set /a _n+=1
+  set "RUNDIR=%CHAIN_ROOT%\%TAG%_!_n!"
+  goto :findfree
+)
+mkdir "%RUNDIR%"
+set "OUTROOT=%RUNDIR%"
 
 echo ============================================================
 echo  Chained seed extension
@@ -80,7 +105,7 @@ echo    seed      : %SEED%
 echo    dimensions: %STARTDIM% -^> %ENDDIM%
 echo    RAM budget: %RAM% GB per step
 echo    extra args:%EXTRA%
-echo    output    : %OUTROOT%
+echo    run folder: %OUTROOT%
 echo ============================================================
 
 set "CURSEED=%SEED%"
