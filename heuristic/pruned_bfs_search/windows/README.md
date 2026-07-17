@@ -93,17 +93,19 @@ Open an **"x64 Native Tools Command Prompt for VS"** (needed so `cl` targets x64
 which `_BitScanForward64` in `bitops.h` requires) and run the build script:
 
 ```bat
-cd pruned_bfs_c_windows\windows
+cd pruned_bfs_search\windows
 build.bat
-cd ..
 parallel_search.exe 7 18.0 10
 priming.exe 8 18.0 extend_input.txt
 snake_in_box.exe 7
 ```
 
-`build.bat` compiles all four executables, passing `/openmp` for
-`parallel_search.exe`. MSVC's `/openmp` (OpenMP 2.0) covers every construct the
-parallel search uses.
+`build.bat` compiles the four executables **in this `windows\` folder** (it builds
+the MSVC-portable copies here, which include `bitops.h`; it must not build the
+parent's GCC sources, whose `__builtin_*` calls MSVC leaves unresolved at link).
+It passes `/openmp` for `parallel_search.exe`; MSVC's `/openmp` (OpenMP 2.0)
+covers every construct the parallel search uses. The `.exe` files, and any
+`seeds\`/`snakes\` output, stay under `windows\`.
 
 #### Chained cross-dimension extension (`chain_extend.bat`)
 

@@ -59,9 +59,9 @@ if not "%~1"=="" (
   goto :collect
 )
 
-REM ---- Locate the binary (built next to the .c sources, one level up). --------
+REM ---- Locate the binary (build.bat builds it here, in the windows folder). --
 set "SCRIPTDIR=%~dp0"
-set "EXE=%SCRIPTDIR%..\extend_snake.exe"
+set "EXE=%SCRIPTDIR%extend_snake.exe"
 if not exist "%EXE%" (
   echo ERROR: extend_snake.exe not found at "%EXE%".
   echo Build it first from an x64 Native Tools Command Prompt for VS:

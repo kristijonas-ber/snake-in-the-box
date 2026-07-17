@@ -14,7 +14,10 @@ REM MinGW-w64 / Clang-on-Windows users do not need this script: the GNU Makefile
 REM in the parent folder works for them unchanged.
 
 setlocal
-pushd "%~dp0.."
+REM Build the MSVC-portable copies in THIS folder (they include bitops.h and use
+REM sib_popcount64/sib_ctz64). Do NOT build the parent's GCC sources: those call
+REM __builtin_popcountll/__builtin_ctzl, which MSVC links as unresolved externals.
+pushd "%~dp0"
 
 REM /std:c11 requires VS2019 16.8+. On older toolsets, remove it (MSVC's default
 REM C mode accepts this code). /D_CRT_SECURE_NO_WARNINGS silences C4996 for
