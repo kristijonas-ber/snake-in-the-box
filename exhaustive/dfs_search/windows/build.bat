@@ -66,12 +66,21 @@ if "%MSMPI_INC%"=="" (
   exit /b 0
 )
 
-set LIBS="%MSMPI_LIB64%\msmpi.lib"
+REM The MS-MPI installer sets these WITH a trailing backslash. Left in place,
+REM /I"%MSMPI_INC%" expands to /I"...\Include\" - the \" escapes the closing
+REM quote, the source filename gets swallowed into the string, and cl fails with
+REM "command line error D8003: missing source filename". Strip it.
+set "MPIINC=%MSMPI_INC%"
+if "%MPIINC:~-1%"=="\" set "MPIINC=%MPIINC:~0,-1%"
+set "MPILIB=%MSMPI_LIB64%"
+if "%MPILIB:~-1%"=="\" set "MPILIB=%MPILIB:~0,-1%"
+
+set LIBS="%MPILIB%\msmpi.lib"
 
 echo Compiling MPI translation units ...
-cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c driver_main.cpp
+cl %CXXFLAGS% /I"%MPIINC%" %DEFS% /c driver_main.cpp
 if errorlevel 1 exit /b 1
-cl %CXXFLAGS% /I"%MSMPI_INC%" %DEFS% /c driver_replay.cpp
+cl %CXXFLAGS% /I"%MPIINC%" %DEFS% /c driver_replay.cpp
 if errorlevel 1 exit /b 1
 
 echo Linking dfs_search.exe ...
