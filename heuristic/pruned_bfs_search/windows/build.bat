@@ -26,6 +26,10 @@ REM fopen/fscanf/atoi/strncpy (warnings only).
 set CFLAGS=/nologo /O2 /std:c11 /D_CRT_SECURE_NO_WARNINGS
 set SHARED=hypercube.c transitions.c validation.c canonical.c snake_node.c fitness.c snake_io.c
 
+REM Clear leftovers up front too (an interrupted build can strand objects that
+REM would otherwise be picked up by the next link).
+del /q *.obj *.pdb *.ilk >nul 2>&1
+
 echo Building snake_in_box.exe ...
 cl %CFLAGS% %SHARED% bfs_pruned.c main.c /Fe:snake_in_box.exe || goto :error
 

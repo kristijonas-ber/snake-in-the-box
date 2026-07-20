@@ -26,25 +26,21 @@ REM  Then run, e.g.:   prefixgen_tool.exe prefixes 1000000
 REM                    mpiexec -n 5 dfs_search.exe
 REM ============================================================================
 setlocal
+REM Build the sources in THIS folder regardless of the caller's current
+REM directory (otherwise cl would compile whatever .cpp happens to sit in the
+REM CWD, or nothing at all).
+pushd "%~dp0"
 
 set CXXFLAGS=/O2 /EHsc /std:c++17 /nologo /W3 /D_CRT_SECURE_NO_WARNINGS
 
-set NDEF=
-set PLDEF=
-set SCDEF=
-set SIDEF=
-set ROFFDEF=
-set RCNTDEF=
-
-for %%A in (%*) do (
-  if /I "%%~A"=="-DN=6" set NDEF=/DN=6
-  if /I "%%~A"=="-DN=8" set NDEF=/DN=8
-)
-
-REM Pass all args through, but keep the command line readable and stable.
+REM Pass all args through verbatim as -D overrides (e.g. /DN=8 /DPREFIX_LENGTH=19).
 set DEFS=%*
 
-del /q prefixgen.obj search.obj driver_main.obj driver_replay.obj driver_prefixgen.obj driver_dfsone.obj prefixgen_tool.exe dfs_one.exe dfs_search.exe dfs_search_replay.exe 2>nul
+REM Objects carry the -D values they were compiled with, so ANY leftover .obj can
+REM silently relink a stale N / PREFIX_LENGTH into the new binaries. Wipe every
+REM object and executable in this folder, not a hardcoded list.
+echo Removing stale objects and binaries ...
+del /q *.obj *.exe *.pdb *.ilk 2>nul
 
 REM ---- no-MPI binaries: need ONLY cl.exe --------------------------------------
 echo Compiling prefixgen_tool + dfs_one (DEFS=%DEFS%) ...
