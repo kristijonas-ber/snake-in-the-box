@@ -431,13 +431,22 @@ static void load_path(SeedList *sl, const char *path, int dimension,
 
 /* Expand nodes[start, end) into `out` (a private, per-thread child list) and
  * track the longest child seen in this chunk. On return *have_best / *best hold
- * an independent copy of the longest child (the caller owns and frees it). */
-static void expand_chunk(const NodeList *current, size_t start, size_t end,
+ * an independent copy of the longest child (the caller owns and frees it).
+ *
+ * `worker_budget_gb` is this worker's fair share of the memory limit (the global
+ * limit / thread count). The buffer is pruned to that share whenever it
+ * overshoots ~1.25x it, so the N private buffers do not collectively blow past
+ * the limit, and each expanded parent is freed immediately so `current` shrinks
+ * as the workers build. `current` is therefore mutated (its nodes freed); this is
+ * safe because chunks are disjoint and snake_node_free is idempotent, so the
+ * caller's end-of-level nodelist_free(&current_level) still works. */
+static void expand_chunk(NodeList *current, size_t start, size_t end,
                          NodeList *out, bool *have_best, SnakeNode *best,
-                         int *legal_dims)
+                         int *legal_dims, double worker_budget_gb)
 {
     *have_best = false;
     size_t best_length = 0;
+    size_t worker_cap = 0;   /* 0 = not yet sized (needs a sample child) */
 
     for (size_t i = start; i < end; i++) {
         const SnakeNode *node = &current->nodes[i];
@@ -475,6 +484,28 @@ static void expand_chunk(const NodeList *current, size_t start, size_t end,
                 }
             }
         }
+
+        /* Parent i is fully expanded. Chunks are disjoint, so this index is ours
+         * alone: free it now so current_level shrinks as the workers build. */
+        snake_node_free(&current->nodes[i]);
+
+        /* Per-worker soft cap: keep this private buffer near its fair share of
+         * the budget. NOTE: capping per worker (not globally) means a chunk with
+         * a disproportionate share of high-fitness nodes may drop some a single
+         * global prune would keep, so the parallel beam is approximately, not
+         * exactly, the serial one. */
+        if (out->count > 0) {
+            if (worker_cap == 0) {
+                size_t bpn = estimate_node_size(&out->nodes[0]);
+                size_t mn = (size_t)((worker_budget_gb * 1024.0 * 1024.0 *
+                                      1024.0) / bpn);
+                if (mn == 0) mn = 1;
+                worker_cap = mn + mn / 4;   /* 1.25x */
+            }
+            if (out->count > worker_cap) {
+                prune_by_fitness(out, worker_budget_gb);
+            }
+        }
     }
 }
 
@@ -482,9 +513,11 @@ static void expand_chunk(const NodeList *current, size_t start, size_t end,
 
 /* Run the pruned BFS in dimension `dimension`, seeded with every snake in
  * `seeds` (instead of the empty root), expanding each level in parallel across
- * `num_workers` threads. Identical in result to extend_snake's extend_search;
- * only the per-level node expansion is distributed. On success writes the
- * longest snake found to *out (caller frees) and returns true. */
+ * `num_workers` threads. Approximately equal in result to extend_snake's
+ * extend_search (each worker soft-caps its buffer to its share of the memory
+ * limit, so a global prune and these per-worker prunes can differ); only the
+ * per-level node expansion is distributed. On success writes the longest snake
+ * found to *out (caller frees) and returns true. */
 static bool parallel_extend_search(int dimension, const Seed *seeds,
                                    size_t num_seeds, double memory_limit_gb,
                                    int num_workers, bool verbose, SnakeNode *out)
@@ -559,8 +592,13 @@ static bool parallel_extend_search(int dimension, const Seed *seeds,
             long local_nodes = 0;
 
             if (legal_dims != NULL) {
+                /* Each worker gets an equal share of the memory limit so the
+                 * private buffers sum to roughly the limit, not N x it. */
+                double worker_budget_gb =
+                    memory_limit_gb / (double)(nthreads > 0 ? nthreads : 1);
                 expand_chunk(&current_level, start, end, &local_next,
-                             &local_have_best, &local_best, legal_dims);
+                             &local_have_best, &local_best, legal_dims,
+                             worker_budget_gb);
                 local_nodes = (long)local_next.count;
                 free(legal_dims);
             }
@@ -598,7 +636,9 @@ static bool parallel_extend_search(int dimension, const Seed *seeds,
             nodelist_free(&local_next);
         }
 
-        /* Prune if memory limit exceeded. */
+        /* Final exact prune of the merged level. The per-worker soft caps in
+         * expand_chunk already keep the workers' buffers (and hence this merge)
+         * near the budget; this trims the union to exactly the limit. */
         if (estimate_memory_usage(&next_level) > memory_limit_gb) {
             if (verbose) {
                 printf("Level %d: Pruning %zu nodes to fit memory limit\n",
@@ -653,7 +693,9 @@ static void usage(const char *prog)
     fprintf(stderr,
         "Usage: %s <target_dimension> [memory_limit_gb] [num_workers] "
         "[--both-ends] [seed ...]\n"
-        "  memory_limit_gb : beam prunes to fit this (default 18.0).\n"
+        "  memory_limit_gb : approximate PEAK RSS cap (default 18.0). The beam is\n"
+        "                    pruned during each level's build (per worker, at\n"
+        "                    limit/num_workers each), so peak stays near this.\n"
         "  num_workers     : OpenMP threads for per-level expansion (default 10).\n"
         "  seed            : text file (transition integers), .bin file (all\n"
         "                    records loaded), or a directory of .bin files.\n"

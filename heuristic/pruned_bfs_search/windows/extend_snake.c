@@ -485,6 +485,14 @@ static bool extend_search(int dimension, const Seed *seeds, size_t num_seeds,
         NodeList next_level;
         nodelist_init(&next_level);
 
+        /* Peak-memory guard. Without an in-build cap the whole next level is
+         * materialised (branching_factor x the beam) and coexists with
+         * current_level, so peak RSS runs to several x memory_limit_gb even
+         * though the end-of-level prune eventually cuts it back. soft_cap is the
+         * count at which we prune mid-build; 0 means "not yet computed" (we need
+         * one sample node to size it). */
+        size_t soft_cap = 0;
+
         /* Generate all children for the current level. */
         for (size_t i = 0; i < current_level.count; i++) {
             SnakeNode *node = &current_level.nodes[i];
@@ -527,9 +535,34 @@ static bool extend_search(int dimension, const Seed *seeds, size_t num_seeds,
                     }
                 }
             }
+
+            /* Parent i is fully expanded; free it now so current_level shrinks
+             * as next_level grows (the two no longer both sit at full size at
+             * peak). snake_node_free NULLs its pointers and is idempotent, so
+             * the end-of-level nodelist_free(&current_level) stays safe. */
+            snake_node_free(&current_level.nodes[i]);
+
+            /* Soft-cap incremental prune: once next_level overshoots ~1.25x the
+             * node budget, cut it back to the budget mid-build. Bounds its peak
+             * to ~1.25x memory_limit_gb instead of branching_factor x it. Uses
+             * the same fitness target as the end-of-level prune, so the surviving
+             * set is unchanged: a node's fitness is fixed at creation, so a node
+             * outside the top max_nodes seen so far can never re-enter it. */
+            if (soft_cap == 0 && next_level.count > 0) {
+                size_t bpn = estimate_node_size(&next_level.nodes[0]);
+                size_t max_nodes =
+                    (size_t)((memory_limit_gb * 1024.0 * 1024.0 * 1024.0) / bpn);
+                if (max_nodes == 0) max_nodes = 1;
+                soft_cap = max_nodes + max_nodes / 4;  /* 1.25x */
+            }
+            if (soft_cap != 0 && next_level.count > soft_cap) {
+                prune_by_fitness(&next_level, memory_limit_gb);
+            }
         }
 
-        /* Prune if the memory limit is exceeded. */
+        /* Final exact prune if still over the limit (usually a no-op now — the
+         * incremental soft-cap prune above keeps next_level near the budget
+         * throughout the build). */
         if (estimate_memory_usage(&next_level) > memory_limit_gb) {
             if (verbose) {
                 printf("Level %d: Pruning %zu nodes to fit memory limit\n",
@@ -588,6 +621,9 @@ static void usage(const char *prog)
 {
     fprintf(stderr,
         "Usage: %s <target_dimension> [memory_limit_gb] [--both-ends] [seed ...]\n"
+        "  memory_limit_gb : approximate PEAK RSS cap for the beam (default 18.0).\n"
+        "         The beam is pruned during each level's build, so peak stays near\n"
+        "         this value (allow ~1.25x slack), not several x it.\n"
         "  seed : a text file (transition integers), a .bin file (exhaustive\n"
         "         emit format, all records loaded), or a directory of .bin files.\n"
         "         Multiple seeds allowed; default is extend_input.txt.\n"
