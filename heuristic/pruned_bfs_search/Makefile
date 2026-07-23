@@ -4,6 +4,7 @@
 #   make               - build the demo executable ./snake_in_box
 #   make run           - build and run with defaults (dimension 7)
 #   make extend_snake  - build ./extend_snake (seed the beam with an existing snake)
+#   make check_snake   - build ./check_snake (validate one sequence + Hamming grid)
 #   make priming       - build ./priming (extend a seed one dimension at a time)
 #   make parallel_search - build ./parallel_search (OpenMP per-level parallelism)
 #   make parallel_extend - build ./parallel_extend (OpenMP seeded extension)
@@ -28,6 +29,10 @@ EXT_TARGET = extend_snake
 PRIME_OBJ = $(SHARED_OBJ) priming.o
 PRIME_TARGET = priming
 
+# Standalone checker: only needs the validator and transition->vertex helper.
+CHK_OBJ = validation.o transitions.o check_snake.o
+CHK_TARGET = check_snake
+
 # The parallel tools compile their driver with OpenMP; shared modules are plain.
 PAR_TARGET = parallel_search
 PAREXT_TARGET = parallel_extend
@@ -43,6 +48,9 @@ $(EXT_TARGET): $(EXT_OBJ)
 $(PRIME_TARGET): $(PRIME_OBJ)
 	$(CC) $(CFLAGS) -o $@ $(PRIME_OBJ)
 
+$(CHK_TARGET): $(CHK_OBJ)
+	$(CC) $(CFLAGS) -o $@ $(CHK_OBJ)
+
 $(PAR_TARGET): $(SHARED_OBJ) parallel_search.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) -o $@ $(SHARED_OBJ) parallel_search.c
 
@@ -57,7 +65,8 @@ run: $(TARGET)
 
 clean:
 	rm -f $(OBJ) snake_io.o extend_snake.o priming.o parallel_search.o \
-	      parallel_extend.o \
-	      $(TARGET) $(EXT_TARGET) $(PRIME_TARGET) $(PAR_TARGET) $(PAREXT_TARGET)
+	      parallel_extend.o check_snake.o \
+	      $(TARGET) $(EXT_TARGET) $(PRIME_TARGET) $(PAR_TARGET) $(PAREXT_TARGET) \
+	      $(CHK_TARGET)
 
 .PHONY: all run clean

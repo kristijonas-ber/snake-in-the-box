@@ -7,6 +7,7 @@ REM bitops.h). It compiles the four executables next to the .c sources.
 REM
 REM   snake_in_box.exe     - direct pruned BFS demo
 REM   extend_snake.exe     - seed the beam and jump to a target dimension
+REM   check_snake.exe      - validate one transition sequence + Hamming grid
 REM   priming.exe          - extend a seed one dimension at a time
 REM   parallel_search.exe  - per-level parallel search (OpenMP)
 REM   parallel_extend.exe  - seeded extension with per-level parallelism (OpenMP)
@@ -35,6 +36,10 @@ cl %CFLAGS% %SHARED% bfs_pruned.c main.c /Fe:snake_in_box.exe || goto :error
 
 echo Building extend_snake.exe ...
 cl %CFLAGS% %SHARED% extend_snake.c /Fe:extend_snake.exe || goto :error
+
+echo Building check_snake.exe ...
+REM Standalone checker: only the validator and the transition->vertex helper.
+cl %CFLAGS% validation.c transitions.c check_snake.c /Fe:check_snake.exe || goto :error
 
 echo Building priming.exe ...
 cl %CFLAGS% %SHARED% priming.c /Fe:priming.exe || goto :error

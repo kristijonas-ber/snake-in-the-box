@@ -714,6 +714,11 @@ int main(int argc, char **argv)
 
         bool valid = validate_snake(vertices, (size_t)n, msg, sizeof(msg));
         printf("Validation:  %s (%s)\n", valid ? "VALID" : "INVALID", msg);
+
+        /* Visual cross-check: the pairwise Hamming grid should show 1s only on
+         * the diagonals adjacent to the main diagonal (drawn for small snakes;
+         * verdict-only for large ones). */
+        print_hamming_grid(vertices, (size_t)n);
         free(vertices);
     }
 

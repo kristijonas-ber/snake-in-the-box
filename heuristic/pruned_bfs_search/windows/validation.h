@@ -36,4 +36,19 @@ bool validate_transition_sequence(const int *transition_sequence,
                                   size_t trans_len, int dimension,
                                   char *msg, size_t msg_len);
 
+/* Print the full matrix of pairwise Hamming distances between the snake's
+ * vertices, so the snake rule can be read off by eye: consecutive vertices
+ * differ by 1, everything else by >= 2. In a VALID snake the only 1s therefore
+ * lie on the two diagonals immediately adjacent to the main diagonal (the main
+ * diagonal itself is 0, drawn as '.'); any 1 elsewhere is a chord. A verdict and
+ * violation count are printed too. The grid is O(n^2) cells, so snakes larger
+ * than HAMMING_GRID_MAX_N are summarised (verdict only) instead of drawn. */
+void print_hamming_grid(const long *vertex_sequence, size_t n);
+
+/* Convenience wrapper: convert a transition sequence to its origin-anchored
+ * vertex path and draw its Hamming grid. Returns false on a bad transition
+ * sequence or allocation failure. */
+bool print_hamming_grid_transitions(const int *transition_sequence,
+                                    size_t trans_len, int dimension);
+
 #endif /* VALIDATION_H */
