@@ -716,8 +716,7 @@ int main(int argc, char **argv)
         printf("Validation:  %s (%s)\n", valid ? "VALID" : "INVALID", msg);
 
         /* Visual cross-check: the pairwise Hamming grid should show 1s only on
-         * the diagonals adjacent to the main diagonal (drawn for small snakes;
-         * verdict-only for large ones). */
+         * the diagonals adjacent to the main diagonal. */
         print_hamming_grid(vertices, (size_t)n);
         free(vertices);
     }

@@ -107,11 +107,6 @@ bool validate_transition_sequence(const int *transition_sequence,
     return result;
 }
 
-/* A full grid is O(n^2) cells; drawing thousands of vertices would flood the
- * terminal, so larger snakes get a verdict-only summary. Bump this if you really
- * want the whole grid of a big snake. */
-#define HAMMING_GRID_MAX_N 64
-
 void print_hamming_grid(const long *vertex_sequence, size_t n)
 {
     if (n == 0) {
@@ -135,17 +130,6 @@ void print_hamming_grid(const long *vertex_sequence, size_t n)
         }
     }
     violations /= 2;
-
-    if (n > HAMMING_GRID_MAX_N) {
-        printf("Hamming grid: %zu vertices exceeds the draw limit (%d); "
-               "verdict only.\n", n, HAMMING_GRID_MAX_N);
-        if (violations == 0)
-            printf("  Band rule OK: every adjacent pair is 1, every other pair "
-                   ">= 2.\n");
-        else
-            printf("  Band rule BROKEN: %zu violation(s).\n", violations);
-        return;
-    }
 
     /* Field width wide enough for the largest distance and the largest index. */
     int w = 1;
