@@ -209,8 +209,7 @@ manager are provided as well.
 | Platform | Path |
 |---|---|
 | **macOS / Linux** | `heuristic/pruned_bfs_search/` or `exhaustive/dfs_search/` |
-| **Windows** | `heuristic/pruned_bfs_search/windows/` or `exhaustive/dfs_search/windows/` |
-| **HPC (SLURM)** | `heuristic/pruned_bfs_search/slurm/` or `exhaustive/dfs_search/slurm/` |
+| **HPC (SLURM)** | `heuristic/slurm/` or `exhaustive/slurm/` |
 
 ---
 
@@ -221,17 +220,14 @@ snake-in-the-box/
 ├── run_exhaustive.sh              # build + run the exhaustive track
 ├── run_heuristic.sh               # build + run the heuristic track
 ├── exhaustive/
-│   ├── dfs_search/
-│   │   ├── config.hpp
-│   │   ├── slurm/                 # SLURM batch scripts
-│   │   └── windows/               # MSVC + MS-MPI port
+│   ├── dfs_search/                # C++ sources only (config.hpp, drivers, …)
+│   ├── slurm/                     # SLURM batch scripts
 │   └── job_outputs/
 └── heuristic/
-    ├── pruned_bfs_search/
-    │   ├── slurm/                 # SLURM batch scripts
-    │   └── windows/               # MSVC + MS-MPI port
-    ├── seeds/
-    └── snakes/
+    ├── pruned_bfs_search/         # C sources only
+    ├── slurm/                     # SLURM batch scripts
+    ├── seeds/                     # transition sequences (solver output)
+    └── snakes/                    # human-readable snake records
 ```
 
 ## License

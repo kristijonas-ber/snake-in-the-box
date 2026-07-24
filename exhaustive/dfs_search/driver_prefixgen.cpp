@@ -11,6 +11,12 @@
 //   ./prefixgen_tool --count
 // Defaults: out_dir=prefixes, batch_size=1000000, from=0, to=all.
 //
+// out_dir is the PARENT for the run. The batch files are written into a
+// subfolder of it named for this build and batch size —
+// <out_dir>/dim<N>_pl<PREFIX_LENGTH>_batch<batch_size>/ — so several runs at
+// different dimensions or batch sizes land in their own labelled folders under
+// the one prefixes/ tree instead of colliding.
+//
 // --count walks the whole space writing nothing, and reports how many canonical
 // prefixes exist — the denominator for estimating a full search's runtime. It
 // touches no disk, so it is bounded by DFS speed alone.
@@ -106,18 +112,26 @@ int main(int argc, char **argv)
     if (batchSize == 0) batchSize = 1;
     if (to <= from) { fprintf(stderr, "prefixgen_tool: 'to' must be greater than 'from'\n"); return 1; }
 
+    // outDir is the parent tree (e.g. prefixes/); the batch files go into a
+    // subfolder labelled with this build's dimension and prefix length plus the
+    // batch size, so distinct runs never share a directory. Create the parent
+    // first, then the labelled subfolder.
     MAKEDIR(outDir);
+    char runDir[512];
+    snprintf(runDir, sizeof(runDir), "%s/dim%d_pl%d_batch%llu",
+             outDir, N, PREFIX_LENGTH, batchSize);
+    MAKEDIR(runDir);
 
     signal(SIGINT,  onSignal);
     signal(SIGTERM, onSignal);
 
     printf("Generating prefixes: N=%d, PREFIX_LENGTH=%d\n", N, PREFIX_LENGTH);
     printf("Output dir=%s, batch size=%llu, ordinal range=[%llu, %llu)\n",
-           outDir, batchSize, from, to);
+           runDir, batchSize, from, to);
     fflush(stdout);
 
     PfxWriter w;
-    w.init(outDir, batchSize);
+    w.init(runDir, batchSize);
 
     bool writeError = false;
     PrefixGen g;

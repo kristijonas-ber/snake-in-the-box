@@ -14,8 +14,6 @@ workstation.md
 *.pdb
 *.pyc
 
-exhaustive/history/
-heuristic/history/
 exhaustive/dfs_search/dfs_search
 exhaustive/dfs_search/dfs_search_replay
 exhaustive/dfs_search/prefixgen_tool
@@ -32,5 +30,5 @@ heuristic/fails/*/snake_in_box
 exhaustive/prefixes/
 exhaustive/prefixes*/
 *.pfx
-# Local-only archive of superseded Windows ports
 archive/
+slurm/

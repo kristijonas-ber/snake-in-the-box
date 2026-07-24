@@ -8,10 +8,41 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>             /* strrchr / memcpy */
 #include <sys/stat.h>            /* stat / struct stat (POSIX and MSVC) */
 #ifdef _WIN32
 #include <direct.h>             /* _mkdir (MSVC / MinGW) */
 #endif
+
+/* Directory holding the seeds/ and snakes/ folders. Empty means "current
+ * working directory" (the historical behaviour); snake_io_set_base() points it
+ * at the track root derived from argv[0]. Kept comfortably under the 512-byte
+ * path buffers used below. */
+static char g_base_dir[384] = "";
+
+void snake_io_set_base(const char *argv0)
+{
+    if (argv0 == NULL) {
+        return;
+    }
+    /* The binary lives in .../heuristic/pruned_bfs_search/<name>, so its own
+     * directory is the pruned_bfs_search folder. Strip the trailing "/<name>"
+     * to get that directory; the seeds/ and snakes/ paths built below then use
+     * "<dir>/.." so output lands in the parent (heuristic/). Accept either
+     * slash so a Windows-style argv[0] also resolves. */
+    const char *fwd = strrchr(argv0, '/');
+    const char *back = strrchr(argv0, '\\');
+    const char *slash = (fwd > back) ? fwd : back;
+    if (slash == NULL) {
+        return;  /* no directory component: keep the CWD-relative fallback */
+    }
+    size_t dir_len = (size_t)(slash - argv0);
+    if (dir_len == 0 || dir_len >= sizeof(g_base_dir)) {
+        return;  /* degenerate or too long to store safely */
+    }
+    memcpy(g_base_dir, argv0, dir_len);
+    g_base_dir[dir_len] = '\0';
+}
 
 /* Create a directory, ignoring "already exists". */
 static void ensure_dir(const char *path)
@@ -36,8 +67,20 @@ bool save_snake_result(const int *transitions, size_t len, int dimension)
         return false;
     }
 
-    ensure_dir("seeds");
-    ensure_dir("snakes");
+    /* Resolve the seeds/ and snakes/ folders. With a base set from argv[0] the
+       binary's directory is pruned_bfs_search/, so "<base>/../seeds" lands in
+       the track root (heuristic/); without one, fall back to CWD-relative. */
+    char seeds_dir[448];
+    char snakes_dir[448];
+    if (g_base_dir[0] != '\0') {
+        snprintf(seeds_dir, sizeof(seeds_dir), "%s/../seeds", g_base_dir);
+        snprintf(snakes_dir, sizeof(snakes_dir), "%s/../snakes", g_base_dir);
+    } else {
+        snprintf(seeds_dir, sizeof(seeds_dir), "seeds");
+        snprintf(snakes_dir, sizeof(snakes_dir), "snakes");
+    }
+    ensure_dir(seeds_dir);
+    ensure_dir(snakes_dir);
 
     /* Find a shared title that clobbers neither the seed nor the snake file.
        A discoverer's surname (dim15_len10375_bernatonis.txt) is appended by hand,
@@ -47,14 +90,14 @@ bool save_snake_result(const int *transitions, size_t len, int dimension)
     for (int k = 1;; k++) {
         if (k == 1) {
             snprintf(seed_path, sizeof(seed_path),
-                     "seeds/dim%d_len%zu.txt", dimension, len);
+                     "%s/dim%d_len%zu.txt", seeds_dir, dimension, len);
             snprintf(snake_path, sizeof(snake_path),
-                     "snakes/dim%d_len%zu.txt", dimension, len);
+                     "%s/dim%d_len%zu.txt", snakes_dir, dimension, len);
         } else {
             snprintf(seed_path, sizeof(seed_path),
-                     "seeds/dim%d_len%zu_%d.txt", dimension, len, k);
+                     "%s/dim%d_len%zu_%d.txt", seeds_dir, dimension, len, k);
             snprintf(snake_path, sizeof(snake_path),
-                     "snakes/dim%d_len%zu_%d.txt", dimension, len, k);
+                     "%s/dim%d_len%zu_%d.txt", snakes_dir, dimension, len, k);
         }
         if (!path_exists(seed_path) && !path_exists(snake_path)) {
             break;

@@ -19,6 +19,7 @@
 
 int main(int argc, char **argv)
 {
+    snake_io_set_base(argv[0]);  /* anchor seeds/ and snakes/ at the track root */
     int dimension = (argc > 1) ? atoi(argv[1]) : 7;
     double memory_limit_gb = (argc > 2) ? atof(argv[2]) : 18.0;
 

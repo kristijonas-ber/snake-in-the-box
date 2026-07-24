@@ -32,7 +32,7 @@ Only the Windows ports keep their own READMEs (under each track's `windows/`).
 Operational/HPC detail lives in this file (below); everything else belongs in
 `README.md`.
 
-Both `exhaustive/history/` and `heuristic/history/` hold superseded earlier
+Both `exhaustive/archive/` and `heuristic/archive/` hold superseded earlier
 implementations, kept for reference and gitignored. `plots/` is likewise
 gitignored.
 

@@ -633,6 +633,7 @@ static void usage(const char *prog)
 
 int main(int argc, char **argv)
 {
+    snake_io_set_base(argv[0]);  /* anchor seeds/ and snakes/ at the track root */
     if (argc < 2) {
         usage(argv[0]);
         return 1;

@@ -33,7 +33,8 @@ Run options:
 
 Standalone prefix pipeline (generate once, distribute, search anywhere):
       --gen-prefixes     generate canonical prefixes to .pfx batch files (no MPI)
-        --gen-out DIR      output dir              (default exhaustive/prefixes)
+        --gen-out DIR      output parent dir       (default exhaustive/prefixes;
+                             batches land in DIR/dim<N>_pl<PL>_batch<size>/)
         --batch-size M     prefixes per file       (default 1000000)
         --from A --to B    only ordinals [A, B)    (partition / resume)
       --from-files F...  MPI DFS over the given .pfx batch files (all args after
@@ -52,7 +53,7 @@ Examples:
   ./run_exhaustive.sh --procs 5 --oversubscribe
   ./run_exhaustive.sh --dim 8 --prefix-length 18 --procs 16
   ./run_exhaustive.sh --dim 7 --gen-prefixes --batch-size 500000
-  ./run_exhaustive.sh --procs 10 --from-files exhaustive/prefixes/batch_*.pfx
+  ./run_exhaustive.sh --procs 10 --from-files exhaustive/prefixes/dim7_pl*/batch_*.pfx
   ./run_exhaustive.sh --decode ../job_outputs/snakes_dfs_search/foo.bin
 
 Output: exhaustive/job_outputs/  (searches)   exhaustive/prefixes/  (generator)

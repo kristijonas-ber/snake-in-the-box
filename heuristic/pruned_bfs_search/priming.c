@@ -386,6 +386,7 @@ static long read_seed(const char *path, int *out, long cap)
 
 int main(int argc, char **argv)
 {
+    snake_io_set_base(argv[0]);  /* anchor seeds/ and snakes/ at the track root */
     if (argc < 2) {
         fprintf(stderr,
                 "Usage: %s <target_dimension> [memory_limit_gb] [input_file]\n",
