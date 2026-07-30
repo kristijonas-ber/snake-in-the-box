@@ -1,6 +1,6 @@
 # Snake-in-the-Box
 
-The snake-in-the-box problem wants to find the longest *snake*—an induced path with no chords—in an $n$-dimensional hypercube $Q_n$. There are two approaches to this problem.
+The snake-in-the-box problem wants to find the longest snake—an induced path with no chords—in an $n$-dimensional hypercube. This repository covers two major approaches to this problem.
 
 | Track | Method | Result | Reach |
 |---|---|---|---|
@@ -11,14 +11,14 @@ The snake-in-the-box problem wants to find the longest *snake*—an induced path
 
 ## Overview
 
-The exhaustive track has proven the exact maximum for every dimension up to $7$, along with the number and transition sequences of canonical longest snakes. For dimension $8$, the length of the longest snake is proven without knowing the number of canonical longest snakes.
+This exhaustive search is able to prove the maximum length for hypercubes up to dimension $7$, along with finding the number and transition sequences of canonical longest snakes. For dimension $8$, the length of the longest snake is proven by Ostergård and Pettersson without knowing the number of canonical longest snakes. This exhaustive search has been 
 
 | Dimension | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|---|
 | **Longest snake (edges)** | 1 | 2 | 4 | 7 | 13 | 26 | 50 | 98 |
 | **Canonical longest snakes** | 1 | 1 | 1 | 1 | 8 | 1 | 12 | N/A |
 
-Beyond that the optimal longest snake length is unknown. The heuristic track chases lower bounds, without proving optimality. The table below lists the longest heuristically found snakes.
+Beyond dimension $8$ the optimal longest snake length is unknown. The heuristic track chases lower bounds, without proving optimality. The table below lists the longest heuristically found snakes.
 
 | Dimension | 9 | 10 | 11 | 12 | 13 |
 |---|---|---|---|---|---|
@@ -91,15 +91,13 @@ cd ..                                                 # run from exhaustive/
 mpirun --oversubscribe -n 5 dfs_search/dfs_search
 ```
 
-> **Always `make clean` when changing `DEFS`.** The build does not track them, so a
-> new `-DN=` otherwise reuses objects from the old dimension. `run_exhaustive.sh`
-> does this for you.
+> **Always `make clean` when changing `DEFS`.** The build does not track them, so a new `-DN=` otherwise reuses objects from the old dimension. `run_exhaustive.sh` does this for you.
 
 ---
 
 ## Heuristic — `heuristic/pruned_bfs_search/`
 
-The track contains five algorithms: two that search a dimension directly, and three that extend an existing snake into a higher one.
+The foundations of heuristic pruned breadth-first search are given can be found in Thomas E. Ace's *New Lower Bounds for Snake-in-the-Box in 11-, 12-, and 13-dimensional Hypercubes* and the core algorithm is a direct C translation of the Python `snake_in_box` package by Daniel Ari Friedman ([docxology/snake](https://github.com/docxology/snake)). The track contains five algorithms: two that search a dimension directly, and three that extend an existing snake into a higher one.
 
 | Algorithm | Function |
 |---|---|
@@ -115,10 +113,10 @@ All take `<dimension> <memory_gb>`; the seeded tools take seed files after that.
 
 | Argument | Meaning |
 |---|---|
-| `dimension` | dimension to search, or to extend *into* |
-| `memory_gb` | memory budget per bfs level; the search prunes once it exceeds this |
+| `dimension` | dimension to extend into |
+| `memory_gb` | memory budget per bfs level; the search prunes stored snake paths to fit within the budget |
 | `workers` | `parallel_search` / `parallel_extend` only — OpenMP thread count |
-| `seed files` | `priming` / `extend_snake` / `parallel_extend` only — a `.txt` of transition integers, or a `.bin` from the exhaustive track |
+| `seed files` | `priming` / `extend_snake` / `parallel_extend` only — a `.txt` of a transition sequence |
 
 ---
 
@@ -135,9 +133,7 @@ vertices:     0 1 3 7 15 14 12 28 29 25 27 26 18 22
 
 A snake of length $L$ has $L$ edges and $L+1$ vertices.
 
-> **Note the two length conventions.** Length is in **edges** everywhere except the exhaustive
-> track's `.bin` filenames, which count **vertices** ($=$ edges $+ 1$). The 26-edge
-> snake in $Q_6$ is `6D_L27_rank2.bin`.
+> **Note the two length conventions.** Length is in **edges** everywhere except the exhaustive track's `.bin` filenames, which count **vertices** ($=$ edges $+ 1$). The 26-edge snake in $Q_6$ is `6D_L27_rank2.bin`.
 
 ### Output
 
@@ -150,10 +146,7 @@ After running the search algorithms, their corresponding outputs will appear in 
 | `exhaustive/job_outputs/` | search summaries and runtimes |
 | `exhaustive/job_outputs/snakes_dfs_search/` | `.bin` files of longest snakes |
 
-## Prerequisites & platforms
-
-The top-level sources target **macOS and Linux**; ports for Windows and the SLURM
-manager are provided as well.
+## Prerequisites
 
 | Prerequisite | Used by |
 |---|---|
