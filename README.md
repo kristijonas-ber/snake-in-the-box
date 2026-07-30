@@ -40,18 +40,18 @@ Two scripts at the repo root build and run either track.
 
 | Command | What it does |
 |---|---|
-| `./run_heuristic.sh serial 7 18.0` | search $Q_7$ for a snake, capped at 18 GB |
-| `./run_heuristic.sh parallel 7 18.0 10` | same search, spread over 10 CPU threads |
-| `./run_heuristic.sh priming 8 18.0 seed.txt` | grow `seed.txt` up to $Q_8$, one dimension per step |
-| `./run_heuristic.sh extend 8 18.0 --both-ends seed.txt` | grow `seed.txt` straight into $Q_8$, from both ends |
+| `./run_heuristic.sh serial 7 2.0` | search $Q_7$ for a snake with 2.0 GB memory budget |
+| `./run_heuristic.sh parallel 7 2.0 10` | same search, spread over 10 CPU threads |
+| `./run_heuristic.sh priming 8 2.0 seed.txt` | grow `seed.txt` up to $Q_8$, one dimension per step |
+| `./run_heuristic.sh extend 8 2.0 --both-ends seed.txt` | grow `seed.txt` straight into $Q_8$, from both ends |
 
 **Exhaustive**
 
 | Command | What it does |
 |---|---|
 | `./run_exhaustive.sh --dim 7 --procs 10` | find every longest snake in $Q_7$ using 10 processes |
-| `./run_exhaustive.sh --dim 8 --slice-count 64 --slice-id 0` | compute just slice 0 of 64 — run the rest elsewhere, in any order |
-| `./run_exhaustive.sh --dim 8 --prefix-length 18` | deeper prefixes = finer-grained work units for the ranks |
+| `./run_exhaustive.sh --dim 8 --slice-count 64 --slice-id 0` | compute just slice 0 of 64 |
+| `./run_exhaustive.sh --dim 8 --prefix-length 18` | generate prefixes of length 18 before full exhaustive search |
 | `./run_exhaustive.sh --decode <file>.bin` | print the snakes stored in a result file |
 
 `--help` on either script lists every option.
@@ -60,17 +60,17 @@ Two scripts at the repo root build and run either track.
 
 ## Exhaustive — `exhaustive/dfs_search/`
 
-The foundations of exhaustive snake-in-the-box algorithms can be found in Ville Pettersson's doctoral dissertation, *Graph Algorithms for Constructing and Enumerating Cycles and Related Structures* (Aalto University publication series, Doctoral Dissertations 127/2015).
+The foundations of exhaustive snake-in-the-box algorithms can be found in Ville Pettersson's doctoral dissertation, *Graph Algorithms for Constructing and Enumerating Cycles and Related Structures*.
 
 The table below lists these and additional optimization techniques for used in this repository.
 
 | Technique | Effect |
 |---|---|
 | **Canonical augmentation** | a snake may only introduce dimension $k$ once $0…k−1$ are used, so of each automorphism group only one representative is ever explored |
-| **Incremental chord test** | each vertex keeps a running count of its snake-neighbours, adjusted in $O(N)$ as the path grows and shrinks; a count of 2 forbids the vertex, so a move's legality is checked without ever rescanning the path |
+| **Incremental chord test** | each vertex keeps a count of its snake-neighbours, adjusted in $O(N)$ as the path grows; a count of 2 forbids the new vertex, so an extension's legality is checked without ever rescanning the path |
 | **Branch and bound** | a running count of still-usable vertices prunes any branch where `length + available < target` |
 | **Streaming prefix generation** | prefixes are emitted by order from a deterministic prefix generator |
-| **Two passes** | the first finds the longest length *L*, the second re-walks and writes to disk only the snakes of that length |
+| **Two passes** | the first pass finds the longest length *L*, the second re-walks and writes to disk only the snakes of that length |
 
 Snakes are written as one byte per transition. Slicing (`SLICE_COUNT`/`SLICE_ID`) and checkpoint/resume let a long run be split across machines or restarted.
 
