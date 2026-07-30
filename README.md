@@ -11,7 +11,7 @@ The snake-in-the-box problem wants to find the longest snake—an induced path w
 
 ## Overview
 
-This exhaustive search is able to prove the maximum length for hypercubes up to dimension $7$, along with finding the number and transition sequences of canonical longest snakes. For dimension $8$, the length of the longest snake is proven by Ostergård and Pettersson without knowing the number of canonical longest snakes. This exhaustive search has been 
+This exhaustive search is able to prove the maximum length for hypercubes up to dimension $7$, along with finding the number and transition sequences of canonical longest snakes. For dimension $8$, the length of the longest snake is proven by Ostergård and Pettersson without knowing the number of canonical longest snakes.
 
 | Dimension | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|---|
