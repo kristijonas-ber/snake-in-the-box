@@ -1,7 +1,6 @@
 # Snake-in-the-Box
 
-The snake-in-the-box problem wants to find the longest *snake*—an induced path with no chords—in an
-$n$-dimensional hypercube $Q_n$. There are two approaches to this problem.
+The snake-in-the-box problem wants to find the longest *snake*—an induced path with no chords—in an $n$-dimensional hypercube $Q_n$. There are two approaches to this problem.
 
 | Track | Method | Result | Reach |
 |---|---|---|---|
@@ -12,14 +11,14 @@ $n$-dimensional hypercube $Q_n$. There are two approaches to this problem.
 
 ## Overview
 
-The exhaustive track has proven the exact maximum for every dimension up to $7$, along with the number of canonical longest snakes.
+The exhaustive track has proven the exact maximum for every dimension up to $7$, along with the number and transition sequences of canonical longest snakes. For dimension $8$, the length of the longest snake is proven without knowing the number of canonical longest snakes.
 
 | Dimension | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|---|
 | **Longest snake (edges)** | 1 | 2 | 4 | 7 | 13 | 26 | 50 | 98 |
 | **Canonical longest snakes** | 1 | 1 | 1 | 1 | 8 | 1 | 12 | N/A |
 
-Beyond that the maximum is unknown, so the heuristic track chases lower bounds; the longest snakes it has seeds for are these, each credited to its discoverer.
+Beyond that the optimal longest snake length is unknown. The heuristic track chases lower bounds, without proving optimality. The table below lists the longest heuristically found snakes.
 
 | Dimension | 9 | 10 | 11 | 12 | 13 |
 |---|---|---|---|---|---|
@@ -33,12 +32,11 @@ Beyond that the maximum is unknown, so the heuristic track chases lower bounds; 
 Two scripts at the repo root build and run either track.
 
 ```bash
-./run_exhaustive.sh --procs 5                   # dimension 6 → 26 edges, count 1
-./run_heuristic.sh serial 7 18.0                # dimension 7, 18 GB memory budget
+./run_exhaustive.sh --dim 6 --procs 5           # dimensixon 6, 5 worker nodes
+./run_heuristic.sh serial 7 2.0                 # dimension 7, 2.0 GB memory budget
 ```
 
-**Heuristic** — the mode picks the algorithm; then `<dimension> <memory_gb>` and,
-for the extenders, a seed file:
+**Heuristic**
 
 | Command | What it does |
 |---|---|
@@ -47,7 +45,7 @@ for the extenders, a seed file:
 | `./run_heuristic.sh priming 8 18.0 seed.txt` | grow `seed.txt` up to $Q_8$, one dimension per step |
 | `./run_heuristic.sh extend 8 18.0 --both-ends seed.txt` | grow `seed.txt` straight into $Q_8$, from both ends |
 
-**Exhaustive** — proves the maximum for a dimension; flags tune the run:
+**Exhaustive**
 
 | Command | What it does |
 |---|---|
@@ -62,22 +60,19 @@ for the extenders, a seed file:
 
 ## Exhaustive — `exhaustive/dfs_search/`
 
-The foundations of exhaustive snake-in-the-box algorithms can be found in Ville Pettersson's doctoral dissertation, *Graph Algorithms for Constructing and Enumerating Cycles and Related Structures* (Aalto University publication series, Doctoral Dissertations 127/2015), which develops the canonical-augmentation search with isomorph rejection and applies it to prove $s(8) = 98$ for snakes and $c(8) = 96$ for coils.
+The foundations of exhaustive snake-in-the-box algorithms can be found in Ville Pettersson's doctoral dissertation, *Graph Algorithms for Constructing and Enumerating Cycles and Related Structures* (Aalto University publication series, Doctoral Dissertations 127/2015).
 
-The table below lists these and additional techniques for optimization.
-
-### What makes it tractable
+The table below lists these and additional optimization techniques for used in this repository.
 
 | Technique | Effect |
 |---|---|
 | **Canonical augmentation** | a snake may only introduce dimension $k$ once $0…k−1$ are used, so of each automorphism group only one representative is ever explored |
 | **Incremental chord test** | each vertex keeps a running count of its snake-neighbours, adjusted in $O(N)$ as the path grows and shrinks; a count of 2 forbids the vertex, so a move's legality is checked without ever rescanning the path |
 | **Branch and bound** | a running count of still-usable vertices prunes any branch where `length + available < target` |
-| **Streaming prefix generation** | prefixes are emitted by ordinal from a deterministic walk, so no prefix table is ever held in RAM |
-| **Two passes** | the first finds the longest length *L*, the second re-walks and emits only the snakes of that length |
+| **Streaming prefix generation** | prefixes are emitted by order from a deterministic prefix generator |
+| **Two passes** | the first finds the longest length *L*, the second re-walks and writes to disk only the snakes of that length |
 
-Snakes are written as one byte per transition; slicing (`SLICE_COUNT`/`SLICE_ID`) and
-checkpoint/resume let a long run be split across machines or restarted.
+Snakes are written as one byte per transition. Slicing (`SLICE_COUNT`/`SLICE_ID`) and checkpoint/resume let a long run be split across machines or restarted.
 
 ### Compile-time parameters
 
@@ -86,9 +81,6 @@ checkpoint/resume let a long run be split across machines or restarted.
 | `N` | dimension to search |
 | `PREFIX_LENGTH`| prefix depth = scheduling granularity |
 | `SLICE_COUNT` / `SLICE_ID` | split into `SLICE_COUNT` independent runs; this one computes slice `SLICE_ID` |
-
-Window mode, checkpoint/resume and Knuth probes are in
-[`config.hpp`](exhaustive/dfs_search/config.hpp).
 
 ### Building by hand
 
@@ -124,27 +116,9 @@ All take `<dimension> <memory_gb>`; the seeded tools take seed files after that.
 | Argument | Meaning |
 |---|---|
 | `dimension` | dimension to search, or to extend *into* |
-| `memory_gb` | memory budget; the search prunes once it exceeds this |
+| `memory_gb` | memory budget per bfs level; the search prunes once it exceeds this |
 | `workers` | `parallel_search` / `parallel_extend` only — OpenMP thread count |
 | `seed files` | `priming` / `extend_snake` / `parallel_extend` only — a `.txt` of transition integers, or a `.bin` from the exhaustive track |
-
-`extend_snake` and `parallel_extend` also take `--both-ends` (grow each seed from its
-other endpoint too) and any number of seed files at once. `parallel_extend` takes the
-worker count as its third argument (`<dimension> <memory_gb> <workers>`), and scales
-across one machine's cores (shared memory), sub-linearly past ~8–16 threads.
-
-### Building by hand
-
-```bash
-cd heuristic/pruned_bfs_search
-make                  # ./snake_in_box
-make parallel_search  # macOS: OMPFLAGS="-Xpreprocessor -fopenmp -lomp"
-make priming
-make extend_snake
-make parallel_extend  # macOS: same OMPFLAGS as parallel_search
-cd ..                 # run from heuristic/
-pruned_bfs_search/snake_in_box 7 18.0
-```
 
 ---
 
@@ -152,9 +126,7 @@ pruned_bfs_search/snake_in_box 7 18.0
 
 ### Transition sequences
 
-A snake can be stored as a **transition sequence**: a sequence of integer bit positions that flip between
-consecutive vertices, i.e. $\log_2(v_i \oplus v_{i+1})$. Decode by starting at vertex
-`0` and XOR-ing in each flipped bit:
+A snake can be stored as a **transition sequence**: a sequence of integer bit positions that flip between consecutive vertices, i.e. $\log_2(v_i \oplus v_{i+1})$. Decode by starting at vertex `0` and XOR-ing in each flipped bit:
 
 ```
 transitions:  0 1 2 3 0 1 4 0 2 1 0 3 2
@@ -169,30 +141,14 @@ A snake of length $L$ has $L$ edges and $L+1$ vertices.
 
 ### Output
 
+After running the search algorithms, their corresponding outputs will appear in these folders:
+
 | Directory | Contents |
 |---|---|
 | `heuristic/seeds/` | integer-only transition sequences |
 | `heuristic/snakes/` | snake length, transition, and vertex sequences |
 | `exhaustive/job_outputs/` | search summaries and runtimes |
 | `exhaustive/job_outputs/snakes_dfs_search/` | `.bin` files of longest snakes |
-
-
-### File naming
-
-```
-dim<N>_len<len>[_<surname>].txt
-```
-
-`<len>` is in **edges**. Solvers save `dim<N>_len<len>.txt` into both `seeds/` and
-`snakes/`. The trailing `_<surname>`
-credits the discoverer and is added by hand.
-
-| Example | Meaning |
-|---|---|
-| `dim15_len10149.txt` | dimension 15, length 10149 |
-| `dim13_len2854_ace.txt` | discovered by Ace |
-
----
 
 ## Prerequisites & platforms
 
@@ -205,11 +161,6 @@ manager are provided as well.
 | Make | both tracks |
 | OpenMPI | exhaustive track |
 | `libomp` | heuristic `parallel_search`, `parallel_extend` (macOS only) |
-
-| Platform | Path |
-|---|---|
-| **macOS / Linux** | `heuristic/pruned_bfs_search/` or `exhaustive/dfs_search/` |
-| **HPC (SLURM)** | `heuristic/slurm/` or `exhaustive/slurm/` |
 
 ---
 
@@ -243,5 +194,5 @@ MIT — see [LICENSE](LICENSE).
   Daniel Ari Friedman ([docxology/snake](https://github.com/docxology/snake), MIT) —
   see [LICENSE](LICENSE) for the full attribution notice.
 
-Development of this repository was assisted by AI coding tools. All reported snakes
+Development of this repository was assisted by AI coding tools. All generated snakes
 are given as transition sequences that can be independently verified.
