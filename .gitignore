@@ -43,3 +43,4 @@ benchmarks
 heuristic/seeds
 heuristic/snakes
 job_outputs/
+exhaustive/job_outputs
