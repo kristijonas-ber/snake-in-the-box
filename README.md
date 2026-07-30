@@ -23,8 +23,8 @@ Beyond that the maximum is unknown, so the heuristic track chases lower bounds; 
 
 | Dimension | 9 | 10 | 11 | 12 | 13 |
 |---|---|---|---|---|---|
-| **Edges** | 190 | 370 | 732 | 1439 | 2854 |
-| **Due to** | Wynn | Kinny | Ace | Ace | Ace |
+| **Edges** | 191 | 379 | 746 | 1476 | 2924 |
+| **Author** | Orland et al. | Orland et al. | Orland et al. | Orland et al. | Orland et al. |
 
 ---
 
@@ -33,7 +33,7 @@ Beyond that the maximum is unknown, so the heuristic track chases lower bounds; 
 Two scripts at the repo root build and run either track.
 
 ```bash
-./run_exhaustive.sh --procs 5 --oversubscribe   # dimension 6 → 26 edges, count 1
+./run_exhaustive.sh --procs 5                   # dimension 6 → 26 edges, count 1
 ./run_heuristic.sh serial 7 18.0                # dimension 7, 18 GB memory budget
 ```
 
